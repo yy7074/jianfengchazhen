@@ -1,0 +1,239 @@
+from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
+from models import AdConfig, AdWatchRecord, User, AdStatus, TransactionType
+from schemas import AdConfigCreate, AdConfigUpdate, AdWatchRequest
+from services.user_service import UserService
+from services.config_service import ConfigService
+from typing import List, Optional
+from datetime import datetime, date
+import random
+
+class AdService:
+    
+    @staticmethod
+    def get_random_ad(db: Session, user_id: int) -> Optional[AdConfig]:
+        """获取随机广告（考虑权重和用户今日观看限制）"""
+        # 获取今日观看记录
+        today = date.today()
+        today_watches = db.query(AdWatchRecord).filter(
+            AdWatchRecord.user_id == user_id,
+            func.date(AdWatchRecord.watch_time) == today
+        ).all()
+        
+        # 获取系统每日广告总限制
+        daily_limit = int(ConfigService.get_config(db, "daily_ad_limit", "20"))
+        if len(today_watches) >= daily_limit:
+            return None
+        
+        # 统计每个广告今日观看次数
+        ad_watch_count = {}
+        for watch in today_watches:
+            ad_watch_count[watch.ad_id] = ad_watch_count.get(watch.ad_id, 0) + 1
+        
+        # 获取当前有效的广告
+        now = datetime.now()
+        available_ads = db.query(AdConfig).filter(
+            AdConfig.status == AdStatus.ACTIVE,
+            or_(AdConfig.start_time.is_(None), AdConfig.start_time <= now),
+            or_(AdConfig.end_time.is_(None), AdConfig.end_time >= now)
+        ).all()
+        
+        # 过滤掉已达到每日限制的广告
+        eligible_ads = []
+        for ad in available_ads:
+            watched_today = ad_watch_count.get(ad.id, 0)
+            if watched_today < ad.daily_limit:
+                eligible_ads.append(ad)
+        
+        if not eligible_ads:
+            return None
+        
+        # 根据权重随机选择
+        weights = [ad.weight for ad in eligible_ads]
+        return random.choices(eligible_ads, weights=weights, k=1)[0]
+    
+    @staticmethod
+    def watch_ad(db: Session, user_id: int, watch_request: AdWatchRequest, ip_address: str = None) -> dict:
+        """处理广告观看"""
+        # 获取广告配置
+        ad = db.query(AdConfig).filter(AdConfig.id == watch_request.ad_id).first()
+        if not ad or ad.status != AdStatus.ACTIVE:
+            return {"success": False, "message": "广告不存在或已下线"}
+        
+        # 检查观看时长是否达标
+        is_completed = watch_request.watch_duration >= ad.min_watch_duration
+        reward_coins = ad.reward_coins if is_completed else 0
+        
+        # 检查今日观看限制
+        today = date.today()
+        today_count = db.query(func.count(AdWatchRecord.id)).filter(
+            AdWatchRecord.user_id == user_id,
+            AdWatchRecord.ad_id == watch_request.ad_id,
+            func.date(AdWatchRecord.watch_time) == today
+        ).scalar()
+        
+        if today_count >= ad.daily_limit:
+            return {"success": False, "message": "今日该广告观看次数已达上限"}
+        
+        # 检查系统每日总限制
+        daily_limit = int(ConfigService.get_config(db, "daily_ad_limit", "20"))
+        total_today = db.query(func.count(AdWatchRecord.id)).filter(
+            AdWatchRecord.user_id == user_id,
+            func.date(AdWatchRecord.watch_time) == today
+        ).scalar()
+        
+        if total_today >= daily_limit:
+            return {"success": False, "message": "今日广告观看次数已达上限"}
+        
+        # 记录观看记录
+        watch_record = AdWatchRecord(
+            user_id=user_id,
+            ad_id=watch_request.ad_id,
+            watch_duration=watch_request.watch_duration,
+            reward_coins=reward_coins,
+            is_completed=1 if is_completed else 0,
+            ip_address=ip_address,
+            device_info=watch_request.device_info
+        )
+        
+        db.add(watch_record)
+        db.commit()
+        db.refresh(watch_record)
+        
+        # 发放奖励金币
+        if reward_coins > 0:
+            UserService.add_coins(
+                db, user_id, float(reward_coins),
+                TransactionType.AD_REWARD,
+                f"观看广告奖励: {ad.name}",
+                watch_record.id
+            )
+        
+        return {
+            "success": True,
+            "message": "广告观看完成",
+            "reward_coins": reward_coins,
+            "is_completed": is_completed
+        }
+    
+    @staticmethod
+    def get_user_ad_stats(db: Session, user_id: int) -> dict:
+        """获取用户广告观看统计"""
+        today = date.today()
+        
+        # 今日观看次数
+        today_count = db.query(func.count(AdWatchRecord.id)).filter(
+            AdWatchRecord.user_id == user_id,
+            func.date(AdWatchRecord.watch_time) == today
+        ).scalar() or 0
+        
+        # 今日获得金币
+        today_coins = db.query(func.sum(AdWatchRecord.reward_coins)).filter(
+            AdWatchRecord.user_id == user_id,
+            func.date(AdWatchRecord.watch_time) == today
+        ).scalar() or 0
+        
+        # 总观看次数
+        total_count = db.query(func.count(AdWatchRecord.id)).filter(
+            AdWatchRecord.user_id == user_id
+        ).scalar() or 0
+        
+        # 总获得金币
+        total_coins = db.query(func.sum(AdWatchRecord.reward_coins)).filter(
+            AdWatchRecord.user_id == user_id
+        ).scalar() or 0
+        
+        # 每日限制
+        daily_limit = int(ConfigService.get_config(db, "daily_ad_limit", "20"))
+        
+        return {
+            "today_count": today_count,
+            "today_coins": float(today_coins),
+            "total_count": total_count,
+            "total_coins": float(total_coins),
+            "daily_limit": daily_limit,
+            "remaining_today": max(0, daily_limit - today_count)
+        }
+    
+    # 管理员功能
+    @staticmethod
+    def create_ad_config(db: Session, ad_data: AdConfigCreate) -> AdConfig:
+        """创建广告配置"""
+        ad = AdConfig(**ad_data.dict())
+        db.add(ad)
+        db.commit()
+        db.refresh(ad)
+        return ad
+    
+    @staticmethod
+    def update_ad_config(db: Session, ad_id: int, ad_data: AdConfigUpdate) -> Optional[AdConfig]:
+        """更新广告配置"""
+        ad = db.query(AdConfig).filter(AdConfig.id == ad_id).first()
+        if not ad:
+            return None
+        
+        for field, value in ad_data.dict(exclude_unset=True).items():
+            setattr(ad, field, value)
+        
+        db.commit()
+        db.refresh(ad)
+        return ad
+    
+    @staticmethod
+    def delete_ad_config(db: Session, ad_id: int) -> bool:
+        """删除广告配置"""
+        ad = db.query(AdConfig).filter(AdConfig.id == ad_id).first()
+        if not ad:
+            return False
+        
+        db.delete(ad)
+        db.commit()
+        return True
+    
+    @staticmethod
+    def get_ad_config(db: Session, ad_id: int) -> Optional[AdConfig]:
+        """获取广告配置"""
+        return db.query(AdConfig).filter(AdConfig.id == ad_id).first()
+    
+    @staticmethod
+    def get_all_ad_configs(db: Session, skip: int = 0, limit: int = 100) -> List[AdConfig]:
+        """获取所有广告配置"""
+        return db.query(AdConfig).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_ad_stats(db: Session, ad_id: int = None) -> dict:
+        """获取广告统计数据"""
+        today = date.today()
+        
+        if ad_id:
+            # 单个广告统计
+            query = db.query(AdWatchRecord).filter(AdWatchRecord.ad_id == ad_id)
+            
+            today_views = query.filter(func.date(AdWatchRecord.watch_time) == today).count()
+            total_views = query.count()
+            today_coins = query.filter(func.date(AdWatchRecord.watch_time) == today).with_entities(
+                func.sum(AdWatchRecord.reward_coins)).scalar() or 0
+            total_coins = query.with_entities(func.sum(AdWatchRecord.reward_coins)).scalar() or 0
+            
+            return {
+                "ad_id": ad_id,
+                "today_views": today_views,
+                "total_views": total_views,
+                "today_coins": float(today_coins),
+                "total_coins": float(total_coins)
+            }
+        else:
+            # 全部广告统计
+            today_views = db.query(func.count(AdWatchRecord.id)).filter(
+                func.date(AdWatchRecord.watch_time) == today).scalar() or 0
+            total_views = db.query(func.count(AdWatchRecord.id)).scalar() or 0
+            today_coins = db.query(func.sum(AdWatchRecord.reward_coins)).filter(
+                func.date(AdWatchRecord.watch_time) == today).scalar() or 0
+            total_coins = db.query(func.sum(AdWatchRecord.reward_coins)).scalar() or 0
+            
+            return {
+                "today_views": today_views,
+                "total_views": total_views,
+                "today_coins": float(today_coins),
+                "total_coins": float(total_coins)
+            } 
