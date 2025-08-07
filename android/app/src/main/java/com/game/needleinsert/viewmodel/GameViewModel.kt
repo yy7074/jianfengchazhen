@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.game.needleinsert.model.*
+import com.game.needleinsert.utils.AdManager
 import com.game.needleinsert.utils.SoundManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -28,6 +29,14 @@ class GameViewModel : ViewModel() {
     var isNeedleLaunching by mutableStateOf(false)
         private set
     
+    // 当前广告
+    var currentAd by mutableStateOf<AdConfig?>(null)
+        private set
+    
+    // 广告奖励显示
+    var adReward by mutableStateOf<AdReward?>(null)
+        private set
+    
     // 圆盘旋转角度
     var diskRotation by mutableFloatStateOf(0f)
         private set
@@ -36,14 +45,14 @@ class GameViewModel : ViewModel() {
     var centerX by mutableFloatStateOf(0f)
     var centerY by mutableFloatStateOf(0f)
     
-    // 圆盘半径
-    val diskRadius = 120f
+    // 圆盘半径 - 增大圆盘
+    val diskRadius = 150f
     
     // 针的长度
     val needleLength = 80f
     
-    // 安全间距(角度)
-    private val safeAngleDistance = 0.3f // 约17度
+    // 安全间距(角度) - 降低难度，增大安全距离
+    private val safeAngleDistance = 0.4f // 约23度
     
     // 初始化游戏
     fun initGame(screenWidth: Float, screenHeight: Float) {
@@ -55,29 +64,61 @@ class GameViewModel : ViewModel() {
     // 开始新游戏
     fun startNewGame() {
         val level = getCurrentLevel()
+        val needleQueue = (1..level.needleCount).toList()
         gameData = GameData(
             level = level.level,
             needlesRequired = level.needleCount,
             rotationSpeed = level.rotationSpeed,
-            state = GameState.PLAYING
+            state = GameState.PLAYING,
+            currentLevelType = level.levelType,
+            needleQueue = needleQueue,
+            isReversed = level.levelType == LevelType.REVERSE,
+            coins = gameData.coins, // 保持金币数量
+            canShowAd = AdManager.canShowAd(),
+            adState = AdState.NONE
         )
         insertedNeedles = emptyList()
         prepareNextNeedle()
         startDiskRotation()
+        
+        // 随机触发广告机会（关卡开始时）
+        checkAndTriggerAd()
     }
     
     // 准备下一个针
     private fun prepareNextNeedle() {
         if (gameData.needlesInserted < gameData.needlesRequired) {
+            val nextNeedleNumber = gameData.needleQueue.getOrNull(gameData.needlesInserted) ?: (gameData.needlesInserted + 1)
+            val needleColor = getNeedleColor(nextNeedleNumber)
+            
             currentNeedle = Needle(
-                id = gameData.needlesInserted + 1,
+                id = nextNeedleNumber,
                 angle = PI.toFloat() / 2, // 从正下方开始
-                radius = diskRadius + needleLength + 100f // 距离更远，准备发射
+                radius = diskRadius + needleLength + 100f, // 距离更远，准备发射
+                color = needleColor,
+                number = nextNeedleNumber
             )
         } else {
             // 游戏完成，进入下一关
             nextLevel()
         }
+    }
+    
+    // 获取针的颜色
+    private fun getNeedleColor(number: Int): androidx.compose.ui.graphics.Color {
+        val colors = listOf(
+            androidx.compose.ui.graphics.Color(0xFF2196F3), // 蓝色
+            androidx.compose.ui.graphics.Color(0xFFF44336), // 红色
+            androidx.compose.ui.graphics.Color(0xFFFFEB3B), // 黄色
+            androidx.compose.ui.graphics.Color(0xFF9C27B0), // 紫色
+            androidx.compose.ui.graphics.Color(0xFF00BCD4), // 青色
+            androidx.compose.ui.graphics.Color(0xFF4CAF50), // 绿色
+            androidx.compose.ui.graphics.Color(0xFFFF9800), // 橙色
+            androidx.compose.ui.graphics.Color(0xFFE91E63), // 粉色
+            androidx.compose.ui.graphics.Color(0xFF795548), // 棕色
+            androidx.compose.ui.graphics.Color(0xFF607D8B)  // 蓝灰色
+        )
+        return colors[(number - 1) % colors.size]
     }
     
     // 插入针
@@ -90,9 +131,9 @@ class GameViewModel : ViewModel() {
         SoundManager.playNeedleLaunch()
         
         viewModelScope.launch {
-            // 动画持续时间和步数
-            val animationDuration = 300L // 300毫秒
-            val steps = 30
+            // 动画持续时间和步数 - 更快的发射速度
+            val animationDuration = 200L // 200毫秒，更快
+            val steps = 25
             val stepDuration = animationDuration / steps
             
             val startRadius = needle.radius
@@ -151,16 +192,45 @@ class GameViewModel : ViewModel() {
     // 开始圆盘旋转
     private fun startDiskRotation() {
         viewModelScope.launch {
+            var randomSpeedTimer = 0L
+            var currentSpeed = gameData.rotationSpeed
+            
             while (gameData.state == GameState.PLAYING) {
-                diskRotation += gameData.rotationSpeed * 2f // 旋转速度
+                // 根据关卡类型调整旋转行为
+                when (gameData.currentLevelType) {
+                    LevelType.RANDOM -> {
+                        randomSpeedTimer += 16
+                        if (randomSpeedTimer >= 1000) { // 每秒变速
+                            currentSpeed = gameData.rotationSpeed * (0.5f + Random.nextFloat() * 1.5f)
+                            randomSpeedTimer = 0L
+                        }
+                    }
+                    LevelType.PRECISION -> {
+                        // 精确模式：间歇性旋转
+                        currentSpeed = if ((System.currentTimeMillis() / 500) % 2 == 0L) {
+                            gameData.rotationSpeed
+                        } else {
+                            0f
+                        }
+                    }
+                    else -> {
+                        currentSpeed = gameData.rotationSpeed
+                    }
+                }
+                
+                val rotationDirection = if (gameData.isReversed) -1f else 1f
+                diskRotation += currentSpeed * 2f * rotationDirection
+                
                 if (diskRotation >= 360f) {
                     diskRotation -= 360f
+                } else if (diskRotation < 0f) {
+                    diskRotation += 360f
                 }
                 
                 // 同时旋转已插入的针
                 insertedNeedles = insertedNeedles.map { needle ->
                     needle.copy(
-                        angle = needle.angle + Math.toRadians(gameData.rotationSpeed * 2.0).toFloat()
+                        angle = needle.angle + Math.toRadians((currentSpeed * 2.0 * rotationDirection).toDouble()).toFloat()
                     )
                 }
                 
@@ -169,15 +239,31 @@ class GameViewModel : ViewModel() {
         }
     }
     
-    // 获取当前关卡配置
+    // 获取当前关卡配置 - 降低难度，减少针数，降低速度
     private fun getCurrentLevel(): GameLevel {
         return when (gameData.level) {
-            1 -> GameLevel(1, 8, 1f)
-            2 -> GameLevel(2, 10, 1.2f)
-            3 -> GameLevel(3, 12, 1.5f)
-            4 -> GameLevel(4, 15, 1.8f)
-            5 -> GameLevel(5, 18, 2f)
-            else -> GameLevel(gameData.level, 20 + gameData.level * 2, 2f + gameData.level * 0.2f)
+            1 -> GameLevel(1, 6, 0.8f, levelType = LevelType.NORMAL, description = "入门关卡")
+            2 -> GameLevel(2, 8, 1f, levelType = LevelType.NORMAL, description = "初级挑战")
+            3 -> GameLevel(3, 10, 1.2f, levelType = LevelType.SPEED, description = "高速旋转")
+            4 -> GameLevel(4, 12, 1.4f, levelType = LevelType.REVERSE, description = "反向旋转")
+            5 -> GameLevel(5, 14, 1.6f, levelType = LevelType.RANDOM, description = "变速挑战")
+            6 -> GameLevel(6, 16, 1.2f, obstacles = 1, levelType = LevelType.OBSTACLE, description = "障碍关卡")
+            7 -> GameLevel(7, 18, 1.8f, levelType = LevelType.LARGE, description = "大量针考验")
+            8 -> GameLevel(8, 10, 0.8f, levelType = LevelType.PRECISION, description = "精确插入")
+            9 -> GameLevel(9, 20, 2f, levelType = LevelType.SPEED, description = "极速挑战")
+            10 -> GameLevel(10, 25, 1.6f, obstacles = 2, levelType = LevelType.OBSTACLE, description = "终极考验")
+            else -> {
+                val baseCount = 30 + (gameData.level - 10) * 3
+                val baseSpeed = 2f + (gameData.level - 10) * 0.2f
+                GameLevel(
+                    gameData.level, 
+                    baseCount, 
+                    baseSpeed, 
+                    obstacles = (gameData.level - 10) / 4,
+                    levelType = LevelType.values().random(),
+                    description = "无尽挑战"
+                )
+            }
         }
     }
     
@@ -190,10 +276,14 @@ class GameViewModel : ViewModel() {
         )
         
         val level = getCurrentLevel()
+        val needleQueue = (1..level.needleCount).toList()
         gameData = gameData.copy(
             needlesRequired = level.needleCount,
             needlesInserted = 0,
-            rotationSpeed = level.rotationSpeed
+            rotationSpeed = level.rotationSpeed,
+            currentLevelType = level.levelType,
+            needleQueue = needleQueue,
+            isReversed = level.levelType == LevelType.REVERSE
         )
         
         insertedNeedles = emptyList()
@@ -225,5 +315,84 @@ class GameViewModel : ViewModel() {
             }
             else -> gameData
         }
+    }
+    
+    // 检查并触发广告
+    private fun checkAndTriggerAd() {
+        // 30%概率在关卡开始时显示广告机会
+        if (Random.nextFloat() < 0.3f && AdManager.canShowAd()) {
+            gameData = gameData.copy(canShowAd = true)
+        }
+    }
+    
+    // 请求观看广告
+    fun requestWatchAd() {
+        if (!gameData.canShowAd || gameData.adState != AdState.NONE) return
+        
+        viewModelScope.launch {
+            gameData = gameData.copy(adState = AdState.LOADING)
+            
+            val ad = AdManager.getRandomAd()
+            if (ad != null) {
+                currentAd = ad
+                gameData = gameData.copy(
+                    adState = AdState.READY,
+                    canShowAd = false
+                )
+            } else {
+                gameData = gameData.copy(
+                    adState = AdState.FAILED,
+                    canShowAd = false
+                )
+            }
+        }
+    }
+    
+    // 开始播放广告
+    fun startPlayingAd() {
+        if (gameData.adState != AdState.READY) return
+        
+        gameData = gameData.copy(adState = AdState.PLAYING)
+        AdManager.startWatchingAd()
+    }
+    
+    // 完成观看广告
+    fun completeAdWatch() {
+        if (gameData.adState != AdState.PLAYING) return
+        
+        viewModelScope.launch {
+            val reward = AdManager.completeAdWatch("user_device_id") // TODO: 使用真实用户ID
+            if (reward != null) {
+                // 发放奖励
+                gameData = gameData.copy(
+                    coins = gameData.coins + reward.coins,
+                    adState = AdState.COMPLETED
+                )
+                adReward = reward
+                
+                // 3秒后隐藏奖励提示
+                delay(3000)
+                adReward = null
+                gameData = gameData.copy(adState = AdState.NONE)
+            } else {
+                gameData = gameData.copy(adState = AdState.FAILED)
+            }
+            currentAd = null
+        }
+    }
+    
+    // 取消观看广告
+    fun cancelAdWatch() {
+        AdManager.cancelAdWatch()
+        currentAd = null
+        gameData = gameData.copy(
+            adState = AdState.NONE,
+            canShowAd = false
+        )
+    }
+    
+    // 关闭广告奖励提示
+    fun dismissAdReward() {
+        adReward = null
     }
 } 

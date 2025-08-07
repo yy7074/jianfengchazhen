@@ -2,8 +2,10 @@ package com.game.needleinsert.ui
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,9 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.game.needleinsert.model.GameState
-import com.game.needleinsert.model.Needle
+import com.game.needleinsert.model.*
 import com.game.needleinsert.viewmodel.GameViewModel
+import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -96,29 +98,45 @@ fun GameScreen(
             )
         }
         
-        // 底部提示
+        // 底部针队列显示
         if (viewModel.gameData.state == GameState.PLAYING) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            NeedleQueueDisplay(
+                needleQueue = viewModel.gameData.needleQueue,
+                currentIndex = viewModel.gameData.needlesInserted,
+                viewModel = viewModel,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 50.dp)
-            ) {
-                Text(
-                    text = if (viewModel.isNeedleLaunching) "针正在发射..." else "点击屏幕发射针",
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 16.sp
+                    .padding(bottom = 30.dp)
+            )
+        }
+        
+        // 广告机会提示
+        if (viewModel.gameData.canShowAd && viewModel.gameData.adState == AdState.NONE) {
+            AdOpportunityDialog(
+                onWatchClick = { viewModel.requestWatchAd() },
+                onDismissClick = { viewModel.cancelAdWatch() }
+            )
+        }
+        
+        // 广告播放界面
+        if (viewModel.gameData.adState == AdState.READY || viewModel.gameData.adState == AdState.PLAYING) {
+            viewModel.currentAd?.let { ad ->
+                AdPlayerDialog(
+                    ad = ad,
+                    adState = viewModel.gameData.adState,
+                    onStartPlay = { viewModel.startPlayingAd() },
+                    onComplete = { viewModel.completeAdWatch() },
+                    onCancel = { viewModel.cancelAdWatch() }
                 )
-                
-                if (!viewModel.isNeedleLaunching) {
-                    Text(
-                        text = "💡 针从下方射向圆盘",
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
             }
+        }
+        
+        // 广告奖励提示
+        viewModel.adReward?.let { reward ->
+            AdRewardDialog(
+                reward = reward,
+                onDismiss = { viewModel.dismissAdReward() }
+            )
         }
     }
 }
@@ -144,15 +162,23 @@ private fun DrawScope.drawGameContent(
     
     drawCircle(
         color = Color(0xFF1a1a2e),
-        radius = viewModel.diskRadius - 20,
+        radius = viewModel.diskRadius - 15, // 减小内圈，让圆盘看起来更大
         center = Offset(centerX, centerY)
     )
     
-    // 绘制中心圆
+    // 绘制中心圆 - 增大中心圆
     drawCircle(
-        color = Color(0xFFea5455),
-        radius = 15f,
+        color = Color(0xFFFFB74D), // 金黄色
+        radius = 50f,
         center = Offset(centerX, centerY)
+    )
+    
+    // 绘制中心圆边框
+    drawCircle(
+        color = Color.White,
+        radius = 50f,
+        center = Offset(centerX, centerY),
+        style = Stroke(width = 4.dp.toPx())
     )
     
     // 绘制已插入的针
@@ -161,8 +187,24 @@ private fun DrawScope.drawGameContent(
             needle = needle,
             centerX = centerX,
             centerY = centerY,
-            color = Color(0xFFf39c12),
+            color = needle.color,
             isInserted = true
+        )
+    }
+    
+    // 在中心圆上绘制剩余针数 - 调整字体大小
+    val remainingNeedles = viewModel.gameData.needlesRequired - viewModel.gameData.needlesInserted
+    drawContext.canvas.nativeCanvas.apply {
+        drawText(
+            remainingNeedles.toString(),
+            centerX,
+            centerY + 15f, // 文字垂直居中偏移
+            android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = 56f // 增大字体
+                textAlign = android.graphics.Paint.Align.CENTER
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
         )
     }
     
@@ -211,7 +253,7 @@ private fun DrawScope.drawGameContent(
             needle = needle,
             centerX = centerX,
             centerY = centerY,
-            color = if (viewModel.isNeedleLaunching) Color(0xFFf39c12) else Color(0xFF00d4aa),
+            color = if (viewModel.isNeedleLaunching) needle.color.copy(alpha = 0.8f) else needle.color,
             isInserted = false
         )
     }
@@ -235,12 +277,12 @@ private fun DrawScope.drawNeedle(
         // 绘制发光光晕
         drawCircle(
             color = color.copy(alpha = 0.3f),
-            radius = 20f,
+            radius = 25f,
             center = Offset(endX, endY)
         )
         drawCircle(
-            color = color.copy(alpha = 0.5f),
-            radius = 12f,
+            color = color.copy(alpha = 0.6f),
+            radius = 15f,
             center = Offset(endX, endY)
         )
     }
@@ -250,38 +292,37 @@ private fun DrawScope.drawNeedle(
         color = color,
         start = Offset(startX, startY),
         end = Offset(endX, endY),
-        strokeWidth = if (isInserted) 6.dp.toPx() else 8.dp.toPx(),
+        strokeWidth = if (isInserted) 8.dp.toPx() else 10.dp.toPx(),
         cap = StrokeCap.Round
     )
     
-    // 绘制针尖
+    // 绘制针头圆圈
     drawCircle(
-        color = if (isInserted) color else Color.White,
-        radius = if (isInserted) 4f else 8f,
+        color = color,
+        radius = if (isInserted) 12f else 16f,
         center = Offset(endX, endY)
     )
     
-    // 如果是准备发射的针，绘制箭头指示
-    if (!isInserted) {
-        val arrowSize = 6f
-        val arrowX1 = endX - cos(needle.angle + 0.5f) * arrowSize
-        val arrowY1 = endY - sin(needle.angle + 0.5f) * arrowSize
-        val arrowX2 = endX - cos(needle.angle - 0.5f) * arrowSize
-        val arrowY2 = endY - sin(needle.angle - 0.5f) * arrowSize
-        
-        drawLine(
-            color = Color.White,
-            start = Offset(endX, endY),
-            end = Offset(arrowX1, arrowY1),
-            strokeWidth = 3.dp.toPx(),
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            color = Color.White,
-            start = Offset(endX, endY),
-            end = Offset(arrowX2, arrowY2),
-            strokeWidth = 3.dp.toPx(),
-            cap = StrokeCap.Round
+    // 绘制针头边框
+    drawCircle(
+        color = Color.White,
+        radius = if (isInserted) 12f else 16f,
+        center = Offset(endX, endY),
+        style = Stroke(width = 2.dp.toPx())
+    )
+    
+    // 在针头上绘制数字
+    drawContext.canvas.nativeCanvas.apply {
+        drawText(
+            needle.number.toString(),
+            endX,
+            endY + if (isInserted) 6f else 8f, // 文字垂直居中偏移
+            android.graphics.Paint().apply {
+                this.color = android.graphics.Color.WHITE
+                textSize = if (isInserted) 20f else 24f
+                textAlign = android.graphics.Paint.Align.CENTER
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
         )
     }
 }
@@ -331,6 +372,34 @@ fun GameInfoBar(
                     color = Color.White.copy(alpha = 0.8f),
                     fontSize = 14.sp
                 )
+                
+                // 显示金币数量
+                Text(
+                    text = "💰 ${gameData.coins}",
+                    color = Color(0xFFFFD700),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // 关卡类型指示
+                val levelTypeIcon = when (gameData.currentLevelType) {
+                    LevelType.SPEED -> "⚡"
+                    LevelType.REVERSE -> "🔄"
+                    LevelType.RANDOM -> "🎲"
+                    LevelType.OBSTACLE -> "⚠️"
+                    LevelType.LARGE -> "📏"
+                    LevelType.PRECISION -> "🎯"
+                    else -> ""
+                }
+                
+                if (levelTypeIcon.isNotEmpty()) {
+                    Text(
+                        text = levelTypeIcon,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
             
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -439,5 +508,358 @@ fun PauseDialog(
                 }
             }
         }
+    )
+}
+
+@Composable
+fun NeedleQueueDisplay(
+    needleQueue: List<Int>,
+    currentIndex: Int,
+    viewModel: GameViewModel,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
+        // 操作提示
+        Text(
+            text = if (viewModel.isNeedleLaunching) "针正在发射..." else "点击屏幕发射针",
+            color = Color.White.copy(alpha = 0.8f),
+            fontSize = 16.sp
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // 针队列
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 20.dp)
+        ) {
+            items(needleQueue.size) { index ->
+                val needleNumber = needleQueue[index]
+                val isCompleted = index < currentIndex
+                val isCurrent = index == currentIndex
+                val needleColor = getNeedleDisplayColor(needleNumber)
+                
+                NeedleQueueItem(
+                    number = needleNumber,
+                    color = needleColor,
+                    isCompleted = isCompleted,
+                    isCurrent = isCurrent,
+                    isLaunching = isCurrent && viewModel.isNeedleLaunching
+                )
+            }
+        }
+        
+        // 关卡类型提示
+        val levelDescription = when (viewModel.gameData.currentLevelType) {
+            LevelType.NORMAL -> "普通关卡"
+            LevelType.SPEED -> "⚡ 高速旋转"
+            LevelType.REVERSE -> "🔄 反向旋转"
+            LevelType.RANDOM -> "🎲 变速挑战"
+            LevelType.OBSTACLE -> "⚠️ 有障碍物"
+            LevelType.LARGE -> "📏 大量针"
+            LevelType.PRECISION -> "🎯 精确插入"
+        }
+        
+        Text(
+            text = levelDescription,
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun NeedleQueueItem(
+    number: Int,
+    color: Color,
+    isCompleted: Boolean,
+    isCurrent: Boolean,
+    isLaunching: Boolean
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .background(
+                color = when {
+                    isCompleted -> Color.Gray.copy(alpha = 0.5f)
+                    isCurrent && isLaunching -> color.copy(alpha = 0.8f)
+                    isCurrent -> color
+                    else -> color.copy(alpha = 0.7f)
+                },
+                shape = CircleShape
+            )
+            .border(
+                width = if (isCurrent) 2.dp else 1.dp,
+                color = if (isCurrent) Color.White else Color.White.copy(alpha = 0.5f),
+                shape = CircleShape
+            )
+    ) {
+        Text(
+            text = number.toString(),
+            color = if (isCompleted) Color.Gray else Color.White,
+            fontSize = 16.sp,
+            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+// 获取显示用的针颜色（与ViewModel中的逻辑一致）
+private fun getNeedleDisplayColor(number: Int): Color {
+    val colors = listOf(
+        Color(0xFF2196F3), // 蓝色
+        Color(0xFFF44336), // 红色
+        Color(0xFFFFEB3B), // 黄色
+        Color(0xFF9C27B0), // 紫色
+        Color(0xFF00BCD4), // 青色
+        Color(0xFF4CAF50), // 绿色
+        Color(0xFFFF9800), // 橙色
+        Color(0xFFE91E63), // 粉色
+        Color(0xFF795548), // 棕色
+        Color(0xFF607D8B)  // 蓝灰色
+    )
+    return colors[(number - 1) % colors.size]
+}
+
+@Composable
+fun AdOpportunityDialog(
+    onWatchClick: () -> Unit,
+    onDismissClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissClick,
+        title = {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🎬",
+                    fontSize = 32.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "观看广告获得奖励",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "观看15秒广告视频可获得金币奖励！",
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "💰 奖励：50-150金币",
+                    fontSize = 14.sp,
+                    color = Color(0xFFFFD700),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onWatchClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50)
+                )
+            ) {
+                Text("观看广告")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissClick) {
+                Text("稍后再看")
+            }
+        }
+    )
+}
+
+@Composable
+fun AdPlayerDialog(
+    ad: AdConfig,
+    adState: AdState,
+    onStartPlay: () -> Unit,
+    onComplete: () -> Unit,
+    onCancel: () -> Unit
+) {
+    var progress by remember { mutableStateOf(0) }
+    var canSkip by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(adState) {
+        if (adState == AdState.PLAYING) {
+            // 模拟广告播放进度
+            for (i in 1..30) {
+                delay(1000)
+                progress = i
+                if (i >= 15) canSkip = true
+                if (i >= 30) {
+                    onComplete()
+                    break
+                }
+            }
+        }
+    }
+    
+    AlertDialog(
+        onDismissRequest = { },
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = ad.title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                if (adState == AdState.PLAYING && canSkip) {
+                    TextButton(onClick = onComplete) {
+                        Text("跳过", color = Color.Gray)
+                    }
+                }
+            }
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                when (adState) {
+                    AdState.READY -> {
+                        Text("准备播放广告...")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onStartPlay) {
+                            Text("开始播放")
+                        }
+                    }
+                    AdState.PLAYING -> {
+                        // 模拟视频播放界面
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .background(Color.Black),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "🎬",
+                                    fontSize = 48.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "广告播放中...",
+                                    color = Color.White,
+                                    fontSize = 16.sp
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                LinearProgressIndicator(
+                                    progress = progress / 30f,
+                                    modifier = Modifier.fillMaxWidth(0.8f)
+                                )
+                                Text(
+                                    text = "${progress}/30秒",
+                                    color = Color.White,
+                                    fontSize = 14.sp
+                                )
+                                if (!canSkip) {
+                                    Text(
+                                        text = "15秒后可跳过",
+                                        color = Color.Gray,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    else -> {
+                        Text("加载中...")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "💰 奖励：${ad.rewardCoins} 金币",
+                    fontSize = 14.sp,
+                    color = Color(0xFFFFD700),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        confirmButton = {
+            if (adState == AdState.READY) {
+                TextButton(onClick = onCancel) {
+                    Text("取消")
+                }
+            }
+        },
+        dismissButton = { }
+    )
+}
+
+@Composable
+fun AdRewardDialog(
+    reward: AdReward,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "🎉",
+                    fontSize = 48.sp
+                )
+                Text(
+                    text = "恭喜获得奖励！",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
+                )
+            }
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = reward.message,
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "💰 +${reward.coins}",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFFD700)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50)
+                )
+            ) {
+                Text("太棒了！")
+            }
+        },
+        dismissButton = { }
     )
 } 

@@ -105,6 +105,14 @@ fun MainMenuScreen(
             Spacer(modifier = Modifier.height(20.dp))
             
             MenuButton(
+                text = "观看广告",
+                onClick = { /* TODO: 实现广告中心 */ },
+                backgroundColor = Color(0xFF4CAF50)
+            )
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            MenuButton(
                 text = "设置",
                 onClick = { /* TODO: 实现设置 */ },
                 backgroundColor = Color(0xFF2d4059)
@@ -132,7 +140,7 @@ fun MainMenuScreen(
                     )
                     
                     Text(
-                        text = "• 点击屏幕从下方发射针到旋转圆盘\n• 针在发射过程中有动画效果\n• 针不能相互碰撞\n• 完成所有针的插入即可过关\n• 随着关卡增加，难度会逐渐提升",
+                        text = "• 点击屏幕从下方发射彩色数字针\n• 针按顺序发射，每个都有独特颜色\n• 中心显示剩余针数，底部显示发射队列\n• 多种关卡类型：普通、高速、反向、变速等\n• 🎬 观看广告获得金币奖励！\n• 精美的视觉效果和流畅动画",
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.8f),
                         lineHeight = 20.sp
