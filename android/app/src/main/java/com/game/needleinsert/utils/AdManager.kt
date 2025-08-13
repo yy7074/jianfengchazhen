@@ -12,12 +12,57 @@ object AdManager {
     private var lastAdRequestTime: Long = 0
     private val adCooldownTime = 30 * 1000L // 30秒冷却时间
     
-    // 模拟广告数据（实际应该从后端获取）
-    private val mockAds = listOf(
-        AdConfig("ad1", "游戏推荐广告", "https://example.com/video1.mp4", "https://example.com/image1.jpg", 50),
-        AdConfig("ad2", "应用下载广告", "https://example.com/video2.mp4", "https://example.com/image2.jpg", 80),
-        AdConfig("ad3", "商品推广广告", "https://example.com/video3.mp4", "https://example.com/image3.jpg", 100),
-        AdConfig("ad4", "特殊活动广告", "https://example.com/video4.mp4", "https://example.com/image4.jpg", 150)
+    // 缓存的广告列表（从后端获取）
+    private var cachedAds: List<AdConfig> = emptyList()
+    private var adsCacheTime: Long = 0
+    private val cacheExpireTime = 10 * 60 * 1000L // 10分钟缓存过期
+    
+    // 模拟广告数据（作为后备数据）
+    private val fallbackAds = listOf(
+        AdConfig(
+            id = "ad1", 
+            title = "精品游戏推荐", 
+            description = "发现更多好玩的游戏",
+            videoUrl = "https://example.com/video1.mp4", 
+            imageUrl = "https://example.com/image1.jpg", 
+            rewardCoins = 80,
+            duration = 30,
+            skipTime = 15,
+            advertiser = "游戏联盟"
+        ),
+        AdConfig(
+            id = "ad2", 
+            title = "热门应用下载", 
+            description = "最新最热门的手机应用",
+            videoUrl = "https://example.com/video2.mp4", 
+            imageUrl = "https://example.com/image2.jpg", 
+            rewardCoins = 100,
+            duration = 25,
+            skipTime = 12,
+            advertiser = "应用商店"
+        ),
+        AdConfig(
+            id = "ad3", 
+            title = "限时特价商品", 
+            description = "超值优惠，不容错过",
+            videoUrl = "https://example.com/video3.mp4", 
+            imageUrl = "https://example.com/image3.jpg", 
+            rewardCoins = 120,
+            duration = 35,
+            skipTime = 18,
+            advertiser = "购物平台"
+        ),
+        AdConfig(
+            id = "ad4", 
+            title = "新用户专享福利", 
+            description = "注册即送大礼包",
+            videoUrl = "https://example.com/video4.mp4", 
+            imageUrl = "https://example.com/image4.jpg", 
+            rewardCoins = 150,
+            duration = 28,
+            skipTime = 15,
+            advertiser = "福利中心"
+        )
     )
     
     /**
@@ -29,21 +74,91 @@ object AdManager {
     }
     
     /**
-     * 获取随机广告
+     * 从后端获取广告列表
      */
-    suspend fun getRandomAd(): AdConfig? {
+    suspend fun loadAdsFromBackend(userId: String, deviceId: String, userLevel: Int): List<AdConfig> {
         return try {
-            delay(500) // 模拟网络请求
-            if (Random.nextFloat() < 0.8f) { // 80%概率有广告
-                val ad = mockAds.random()
-                currentAd = ad
-                lastAdRequestTime = System.currentTimeMillis()
-                Log.d("AdManager", "获取广告成功: ${ad.title}")
-                ad
-            } else {
-                Log.d("AdManager", "暂无可用广告")
-                null
+            // 检查缓存是否有效
+            val currentTime = System.currentTimeMillis()
+            if (cachedAds.isNotEmpty() && (currentTime - adsCacheTime) < cacheExpireTime) {
+                Log.d("AdManager", "使用缓存的广告列表")
+                return cachedAds
             }
+            
+            // TODO: 实际调用后端API
+            // val request = AdListRequest(userId, deviceId, userLevel, lastAdRequestTime)
+            // val response = RetrofitClient.getApiService().getAvailableAds("token", request)
+            // val ads = RetrofitClient.getResponseData(response) ?: fallbackAds
+            
+            // 模拟网络请求延迟
+            delay(800)
+            
+            // 模拟后端返回的广告配置（根据用户等级和行为）
+            val backendAds = when {
+                userLevel >= 5 -> fallbackAds + AdConfig(
+                    id = "vip_ad1",
+                    title = "VIP专属福利",
+                    description = "高级用户专享超级奖励",
+                    videoUrl = "https://example.com/vip_video.mp4",
+                    imageUrl = "https://example.com/vip_image.jpg",
+                    rewardCoins = 200,
+                    duration = 20,
+                    skipTime = 10,
+                    advertiser = "VIP俱乐部"
+                )
+                userLevel >= 3 -> fallbackAds.take(3)
+                else -> fallbackAds.take(2)
+            }
+            
+            // 过滤激活的广告
+            val activeAds = backendAds.filter { it.isActive }
+            
+            // 更新缓存
+            cachedAds = activeAds
+            adsCacheTime = currentTime
+            
+            Log.d("AdManager", "从后端获取到 ${activeAds.size} 个广告")
+            activeAds
+            
+        } catch (e: Exception) {
+            Log.e("AdManager", "获取后端广告失败: ${e.message}")
+            fallbackAds // 失败时返回后备广告
+        }
+    }
+    
+    /**
+     * 根据权重获取随机广告
+     */
+    suspend fun getRandomAd(userId: String = "default", deviceId: String = "default", userLevel: Int = 1): AdConfig? {
+        return try {
+            val availableAds = loadAdsFromBackend(userId, deviceId, userLevel)
+            if (availableAds.isEmpty()) {
+                Log.d("AdManager", "暂无可用广告")
+                return null
+            }
+            
+            // 根据权重选择广告
+            val totalWeight = availableAds.sumOf { it.weight }
+            val randomWeight = Random.nextInt(totalWeight)
+            var currentWeight = 0
+            
+            for (ad in availableAds) {
+                currentWeight += ad.weight
+                if (randomWeight < currentWeight) {
+                    currentAd = ad
+                    lastAdRequestTime = System.currentTimeMillis()
+                    Log.d("AdManager", "获取广告成功: ${ad.title} (权重: ${ad.weight})")
+                    return ad
+                }
+            }
+            
+            // 如果权重计算失败，随机选择一个
+            val ad = availableAds.random()
+            currentAd = ad
+            lastAdRequestTime = System.currentTimeMillis()
+            Log.d("AdManager", "随机选择广告: ${ad.title}")
+            ad
+            
         } catch (e: Exception) {
             Log.e("AdManager", "获取广告失败: ${e.message}")
             null
@@ -58,31 +173,41 @@ object AdManager {
         Log.d("AdManager", "开始观看广告")
     }
     
-    /**
+        /**
      * 完成观看广告并获取奖励
      */
-    suspend fun completeAdWatch(userId: String): AdReward? {
+    suspend fun completeAdWatch(userId: String, isCompleted: Boolean = true, skipTime: Long = 0): AdReward? {
         val ad = currentAd ?: return null
         val watchDuration = System.currentTimeMillis() - adWatchStartTime
+        val requiredWatchTime = ad.skipTime * 1000L // 转换为毫秒
         
         return try {
-            // 模拟广告观看验证（至少观看15秒）
-            if (watchDuration >= 15000) {
+            // 检查观看时间是否足够
+            val canGetReward = watchDuration >= requiredWatchTime || isCompleted
+            
+            if (canGetReward) {
                 val reward = AdReward(
                     coins = ad.rewardCoins,
                     message = "观看广告奖励 ${ad.rewardCoins} 金币！"
                 )
                 
-                             // TODO: 真实情况下应该调用后端API验证
-             // val request = AdWatchRequest(userId, ad.id, watchDuration)
-             // val response = RetrofitClient.getApiService().submitAdWatch("token", request)
-             // return RetrofitClient.getResponseData(response)
+                // TODO: 提交到后端验证
+                // val request = AdWatchRequest(
+                //     userId = userId,
+                //     adId = ad.id,
+                //     watchDuration = watchDuration,
+                //     isCompleted = isCompleted,
+                //     skipTime = skipTime,
+                //     deviceInfo = getDeviceInfo()
+                // )
+                // val response = RetrofitClient.getApiService().submitAdWatch("token", request)
+                // return RetrofitClient.getResponseData(response)
                 
-                Log.d("AdManager", "广告观看完成，奖励: ${reward.coins} 金币")
+                Log.d("AdManager", "广告观看完成: ${ad.title}, 观看时长: ${watchDuration}ms, 奖励: ${reward.coins} 金币")
                 currentAd = null
                 reward
             } else {
-                Log.w("AdManager", "观看时间不足: ${watchDuration}ms")
+                Log.w("AdManager", "观看时间不足: ${watchDuration}ms, 需要: ${requiredWatchTime}ms")
                 null
             }
         } catch (e: Exception) {

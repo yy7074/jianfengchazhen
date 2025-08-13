@@ -1,6 +1,7 @@
 package com.game.needleinsert.model
 
 import com.google.gson.annotations.SerializedName
+import java.io.Serializable
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -104,15 +105,35 @@ data class GameResultSubmit(
 data class AdConfig(
     @SerializedName("id") val id: String,
     @SerializedName("title") val title: String,
+    @SerializedName("description") val description: String = "",
     @SerializedName("video_url") val videoUrl: String,
     @SerializedName("image_url") val imageUrl: String,
-    @SerializedName("reward_coins") val rewardCoins: Int
-)
+    @SerializedName("thumbnail_url") val thumbnailUrl: String = "",
+    @SerializedName("reward_coins") val rewardCoins: Int,
+    @SerializedName("duration") val duration: Int = 30, // 广告时长（秒）
+    @SerializedName("skip_time") val skipTime: Int = 15, // 可跳过时间（秒）
+    @SerializedName("is_active") val isActive: Boolean = true,
+    @SerializedName("weight") val weight: Int = 1, // 权重，用于随机选择
+    @SerializedName("daily_limit") val dailyLimit: Int = 10, // 每日展示限制
+    @SerializedName("click_url") val clickUrl: String = "", // 点击跳转链接
+    @SerializedName("advertiser") val advertiser: String = "" // 广告主
+) : Serializable
 
 data class AdWatchRequest(
     @SerializedName("user_id") val userId: String,
     @SerializedName("ad_id") val adId: String,
-    @SerializedName("watch_duration") val watchDuration: Long
+    @SerializedName("watch_duration") val watchDuration: Long,
+    @SerializedName("is_completed") val isCompleted: Boolean,
+    @SerializedName("skip_time") val skipTime: Long = 0,
+    @SerializedName("device_info") val deviceInfo: String = "",
+    @SerializedName("timestamp") val timestamp: Long = System.currentTimeMillis()
+)
+
+data class AdListRequest(
+    @SerializedName("user_id") val userId: String,
+    @SerializedName("device_id") val deviceId: String,
+    @SerializedName("user_level") val userLevel: Int = 1,
+    @SerializedName("last_ad_time") val lastAdTime: Long = 0
 )
 
 data class AdReward(

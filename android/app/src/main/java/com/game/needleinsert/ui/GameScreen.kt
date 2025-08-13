@@ -4,6 +4,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.*
@@ -21,8 +22,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import com.game.needleinsert.model.*
 import com.game.needleinsert.viewmodel.GameViewModel
+import com.game.needleinsert.ui.theme.GameColors
+import com.game.needleinsert.ui.components.AnimatedBackground
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -42,42 +47,34 @@ fun GameScreen(
         viewModel.initGame(screenWidth, screenHeight)
     }
     
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFF1a1a2e),
-                        Color(0xFF16213e),
-                        Color(0xFF0f0f23)
-                    )
-                )
-            )
+    AnimatedBackground(
+        modifier = modifier.fillMaxSize(),
+        particleCount = 30
     ) {
-        // 游戏区域
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable {
-                    if (viewModel.gameData.state == GameState.PLAYING) {
-                        viewModel.insertNeedle()
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 游戏区域
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable {
+                        if (viewModel.gameData.state == GameState.PLAYING) {
+                            viewModel.insertNeedle()
+                        }
                     }
-                }
-        ) {
-            drawGameContent(
-                viewModel = viewModel,
-                canvasSize = size
+            ) {
+                drawGameContent(
+                    viewModel = viewModel,
+                    canvasSize = size
+                )
+            }
+            
+            // 顶部信息栏
+            GameInfoBar(
+                gameData = viewModel.gameData,
+                onPauseClick = { viewModel.togglePause() },
+                onBackClick = onBackPressed,
+                modifier = Modifier.align(Alignment.TopCenter)
             )
-        }
-        
-        // 顶部信息栏
-        GameInfoBar(
-            gameData = viewModel.gameData,
-            onPauseClick = { viewModel.togglePause() },
-            onBackClick = onBackPressed,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
         
         // 游戏结束对话框
         if (viewModel.gameData.state == GameState.GAME_OVER) {
@@ -138,6 +135,7 @@ fun GameScreen(
                 onDismiss = { viewModel.dismissAdReward() }
             )
         }
+        }
     }
 }
 
@@ -152,33 +150,92 @@ private fun DrawScope.drawGameContent(
     viewModel.centerX = centerX
     viewModel.centerY = centerY
     
-    // 绘制圆盘
-    drawCircle(
-        color = Color(0xFF2d4059),
-        radius = viewModel.diskRadius,
+    // 绘制圆盘 - 使用渐变和发光效果
+    val diskGradient = Brush.radialGradient(
+        colors = listOf(
+            GameColors.ElectricBlue.copy(alpha = 0.8f),
+            GameColors.RoyalPurple.copy(alpha = 0.6f),
+            GameColors.MidnightBlue.copy(alpha = 0.9f)
+        ),
         center = Offset(centerX, centerY),
-        style = Stroke(width = 8.dp.toPx())
+        radius = viewModel.diskRadius
     )
     
+    // 外层发光圈
     drawCircle(
-        color = Color(0xFF1a1a2e),
-        radius = viewModel.diskRadius - 15, // 减小内圈，让圆盘看起来更大
+        brush = Brush.radialGradient(
+            colors = listOf(
+                GameColors.ElectricBlue.copy(alpha = 0.3f),
+                Color.Transparent
+            ),
+            center = Offset(centerX, centerY),
+            radius = viewModel.diskRadius + 20f
+        ),
+        radius = viewModel.diskRadius + 20f,
         center = Offset(centerX, centerY)
     )
     
-    // 绘制中心圆 - 增大中心圆
+    // 主圆盘
     drawCircle(
-        color = Color(0xFFFFB74D), // 金黄色
+        brush = diskGradient,
+        radius = viewModel.diskRadius - 15,
+        center = Offset(centerX, centerY)
+    )
+    
+    // 圆盘边框
+    drawCircle(
+        color = GameColors.ElectricBlue,
+        radius = viewModel.diskRadius,
+        center = Offset(centerX, centerY),
+        style = Stroke(width = 6.dp.toPx())
+    )
+    
+    // 绘制中心圆 - 豪华金色渐变
+    val centerGradient = Brush.radialGradient(
+        colors = listOf(
+            GameColors.GoldYellow,
+            GameColors.SunsetOrange,
+            GameColors.AccentOrange.copy(alpha = 0.8f)
+        ),
+        center = Offset(centerX, centerY),
+        radius = 50f
+    )
+    
+    // 中心圆外层光晕
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                GameColors.GoldYellow.copy(alpha = 0.4f),
+                GameColors.SunsetOrange.copy(alpha = 0.2f),
+                Color.Transparent
+            ),
+            center = Offset(centerX, centerY),
+            radius = 70f
+        ),
+        radius = 70f,
+        center = Offset(centerX, centerY)
+    )
+    
+    // 主中心圆
+    drawCircle(
+        brush = centerGradient,
         radius = 50f,
         center = Offset(centerX, centerY)
     )
     
-    // 绘制中心圆边框
+    // 中心圆边框 - 双层边框效果
     drawCircle(
         color = Color.White,
         radius = 50f,
         center = Offset(centerX, centerY),
         style = Stroke(width = 4.dp.toPx())
+    )
+    
+    drawCircle(
+        color = GameColors.GoldYellow,
+        radius = 46f,
+        center = Offset(centerX, centerY),
+        style = Stroke(width = 2.dp.toPx())
     )
     
     // 绘制已插入的针
@@ -339,9 +396,24 @@ fun GameInfoBar(
             .fillMaxWidth()
             .padding(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Black.copy(alpha = 0.5f)
-        )
+            containerColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(20.dp)
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            GameColors.DeepPurple.copy(alpha = 0.8f),
+                            GameColors.RoyalPurple.copy(alpha = 0.6f),
+                            GameColors.ElectricBlue.copy(alpha = 0.4f)
+                        )
+                    ),
+                    RoundedCornerShape(20.dp)
+                )
+        ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -424,6 +496,7 @@ fun GameInfoBar(
                     fontSize = 20.sp
                 )
             }
+        }
         }
     }
 }

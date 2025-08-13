@@ -332,7 +332,7 @@ class GameViewModel : ViewModel() {
         viewModelScope.launch {
             gameData = gameData.copy(adState = AdState.LOADING)
             
-            val ad = AdManager.getRandomAd()
+            val ad = AdManager.getRandomAd("user_id", "device_id", gameData.level)
             if (ad != null) {
                 currentAd = ad
                 gameData = gameData.copy(

@@ -17,6 +17,12 @@ interface ApiService {
     suspend fun getUserProfile(@Header("Authorization") token: String): Response<BaseResponse<User>>
     
     // 广告相关接口
+    @POST("api/ad/list")
+    suspend fun getAvailableAds(
+        @Header("Authorization") token: String,
+        @Body request: AdListRequest
+    ): Response<BaseResponse<List<AdConfig>>>
+    
     @GET("api/ad/random")
     suspend fun getRandomAd(@Header("Authorization") token: String): Response<BaseResponse<AdConfig>>
     
@@ -25,6 +31,17 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: AdWatchRequest
     ): Response<BaseResponse<AdReward>>
+    
+    @GET("api/ad/stats")
+    suspend fun getAdStats(@Header("Authorization") token: String): Response<BaseResponse<Map<String, Any>>>
+    
+    @FormUrlEncoded
+    @POST("api/ad/click")
+    suspend fun recordAdClick(
+        @Header("Authorization") token: String,
+        @Field("ad_id") adId: String,
+        @Field("user_id") userId: String
+    ): Response<BaseResponse<String>>
     
     // 游戏相关接口
     @POST("api/game/result")
