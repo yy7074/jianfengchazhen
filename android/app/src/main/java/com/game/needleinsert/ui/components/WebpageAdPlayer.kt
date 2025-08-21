@@ -21,6 +21,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun WebpageAdPlayer(
     adConfig: AdConfig,
+    onAdStarted: () -> Unit = {},
     onAdCompleted: (Boolean) -> Unit,
     onAdClosed: () -> Unit,
     modifier: Modifier = Modifier
@@ -49,6 +50,7 @@ fun WebpageAdPlayer(
     LaunchedEffect(Unit) {
         showWebView = true
         webViewStarted = true
+        onAdStarted() // 通知广告开始
     }
 
     Box(

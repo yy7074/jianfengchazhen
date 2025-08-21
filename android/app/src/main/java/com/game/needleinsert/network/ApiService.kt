@@ -38,9 +38,9 @@ interface ApiService {
     @GET("api/ad/random")
     suspend fun getRandomAd(@Header("Authorization") token: String): Response<BaseResponse<AdConfig>>
     
-    @POST("api/ad/watch")
+    @POST("api/ad/watch/{user_id}")
     suspend fun submitAdWatch(
-        @Header("Authorization") token: String,
+        @Path("user_id") userId: String,
         @Body request: AdWatchRequest
     ): Response<BaseResponse<AdReward>>
     

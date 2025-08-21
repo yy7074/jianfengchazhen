@@ -51,10 +51,37 @@ class SettingsViewModel : ViewModel() {
                 
                 val currentUser = UserManager.getCurrentUser()
                 if (currentUser != null) {
+                    // 先显示本地缓存的用户信息
                     _uiState.value = _uiState.value.copy(
                         userInfo = currentUser,
                         isLoading = false
                     )
+                    
+                    // 然后从服务器获取最新信息并更新
+                    try {
+                        val response = apiService.getUserStats(currentUser.id)
+                        if (response.isSuccessful && response.body()?.code == 200) {
+                            val statsData = response.body()?.data as? Map<String, Any>
+                            statsData?.let { stats ->
+                                // 使用服务器数据更新用户信息
+                                val updatedUser = currentUser.copy(
+                                    coins = (stats["current_coins"] as? Number)?.toInt() ?: currentUser.coins,
+                                    bestScore = (stats["best_score"] as? Number)?.toInt() ?: currentUser.bestScore,
+                                    level = (stats["level"] as? Number)?.toInt() ?: currentUser.level,
+                                    gameCount = (stats["game_count"] as? Number)?.toInt() ?: currentUser.gameCount,
+                                    totalCoins = (stats["total_coins"] as? Number)?.toFloat() ?: currentUser.totalCoins
+                                )
+                                
+                                // 更新本地缓存和UI显示
+                                UserManager.updateUserInfo(updatedUser)
+                                _uiState.value = _uiState.value.copy(userInfo = updatedUser)
+                                Log.d("SettingsViewModel", "用户信息已更新: ${updatedUser.nickname}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w("SettingsViewModel", "从服务器获取用户信息失败，使用本地缓存", e)
+                        // 忽略网络错误，继续使用本地缓存的信息
+                    }
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

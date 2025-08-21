@@ -240,21 +240,35 @@ object AdManager {
                     message = "观看广告奖励 ${ad.rewardCoins} 金币！"
                 )
                 
-                // TODO: 提交到后端验证
-                // val request = AdWatchRequest(
-                //     userId = userId,
-                //     adId = ad.id,
-                //     watchDuration = watchDuration,
-                //     isCompleted = isCompleted,
-                //     skipTime = skipTime,
-                //     deviceInfo = getDeviceInfo()
-                // )
-                // val response = RetrofitClient.getApiService().submitAdWatch("token", request)
-                // return RetrofitClient.getResponseData(response)
+                // 提交到后端验证并获得奖励
+                val request = AdWatchRequest(
+                    userId = userId,
+                    adId = ad.id,
+                    watchDuration = watchDuration,
+                    isCompleted = isCompleted,
+                    skipTime = skipTime,
+                    deviceInfo = "Android"
+                )
                 
-                Log.d("AdManager", "广告观看完成: ${ad.title}, 观看时长: ${watchDuration}ms, 奖励: ${reward.coins} 金币")
+                val finalReward = try {
+                    val response = RetrofitClient.getApiService().submitAdWatch(userId, request)
+                    if (response.isSuccessful && response.body()?.code == 200) {
+                        val serverReward = response.body()?.data
+                        Log.d("AdManager", "服务器确认奖励: ${serverReward?.coins} 金币")
+                        // 使用服务器返回的奖励数据
+                        serverReward ?: reward
+                    } else {
+                        Log.w("AdManager", "服务器验证失败，使用本地奖励: ${response.body()?.message}")
+                        reward
+                    }
+                } catch (e: Exception) {
+                    Log.e("AdManager", "提交广告记录失败: ${e.message}")
+                    reward
+                }
+                
+                Log.d("AdManager", "广告观看完成: ${ad.title}, 观看时长: ${watchDuration}ms, 奖励: ${finalReward.coins} 金币")
                 currentAd = null
-                reward
+                finalReward
             } else {
                 Log.w("AdManager", "观看时间不足: ${watchDuration}ms, 需要: ${requiredWatchTime}ms")
                 null

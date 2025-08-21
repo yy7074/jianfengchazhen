@@ -36,6 +36,7 @@ fun VideoAdPlayer(
     skipTime: Int,
     rewardCoins: Int,
     advertiser: String,
+    onAdStarted: () -> Unit = {},
     onAdCompleted: (Boolean) -> Unit, // 参数表示是否完整观看
     onAdClosed: () -> Unit,
     modifier: Modifier = Modifier

@@ -830,18 +830,121 @@
                 <div class="page-subtitle">管理系统参数和配置选项</div>
             </div>
             
+            <!-- 金币兑换配置 -->
             <div class="content-card">
                 <div class="card-header">
                     <div class="card-title">
-                        <span class="card-title-icon">⚙️</span>
-                        系统参数
+                        <span class="card-title-icon">💰</span>
+                        金币兑换配置
                     </div>
+                    <button class="btn btn-success" onclick="saveExchangeConfig()">保存配置</button>
                 </div>
                 <div class="card-body">
-                    <div class="info-box">
-                        <div class="info-box-title">🔧 配置说明</div>
-                        <div class="info-box-content">
-                            系统配置功能正在开发中，敬请期待...
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">金币兑换人民币比例</label>
+                            <input type="number" id="coin_to_rmb_rate" class="form-input" placeholder="1000" min="100" max="10000" step="100">
+                            <small style="color: #6b7280;">多少金币等于1元人民币</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">提现最小金币数量</label>
+                            <input type="number" id="withdrawal_min_coins" class="form-input" placeholder="1000" min="100" step="100">
+                            <small style="color: #6b7280;">用户最少需要多少金币才能提现</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">最小提现金额（元）</label>
+                            <input type="number" id="min_withdraw_amount" class="form-input" placeholder="10" min="1" max="100" step="1">
+                            <small style="color: #6b7280;">单次提现最小金额</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">最大提现金额（元）</label>
+                            <input type="number" id="max_withdraw_amount" class="form-input" placeholder="500" min="10" max="5000" step="10">
+                            <small style="color: #6b7280;">单次提现最大金额</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">提现手续费率（%）</label>
+                            <input type="number" id="withdrawal_fee_rate" class="form-input" placeholder="0" min="0" max="10" step="0.1">
+                            <small style="color: #6b7280;">提现手续费百分比，0表示免费</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 广告奖励配置 -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">🎬</span>
+                        广告奖励配置
+                    </div>
+                    <button class="btn btn-success" onclick="saveAdConfig()">保存配置</button>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">观看广告最小奖励金币</label>
+                            <input type="number" id="ad_reward_coins_min" class="form-input" placeholder="50" min="1" max="1000" step="10">
+                            <small style="color: #6b7280;">用户观看广告最少获得的金币</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">观看广告最大奖励金币</label>
+                            <input type="number" id="ad_reward_coins_max" class="form-input" placeholder="200" min="50" max="2000" step="10">
+                            <small style="color: #6b7280;">用户观看广告最多获得的金币</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">默认奖励金币</label>
+                            <input type="number" id="ad_reward_coins_default" class="form-input" placeholder="100" min="10" max="1000" step="10">
+                            <small style="color: #6b7280;">广告未设置奖励时的默认值</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">每日广告观看上限</label>
+                            <input type="number" id="daily_ad_limit" class="form-input" placeholder="20" min="1" max="100" step="1">
+                            <small style="color: #6b7280;">用户每天最多可以观看多少个广告</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">视频广告最小观看时长（秒）</label>
+                            <input type="number" id="video_ad_min_duration" class="form-input" placeholder="15" min="5" max="60" step="5">
+                            <small style="color: #6b7280;">视频广告至少观看多长时间才能获得奖励</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">网页广告最小观看时长（秒）</label>
+                            <input type="number" id="webpage_ad_min_duration" class="form-input" placeholder="10" min="3" max="30" step="1">
+                            <small style="color: #6b7280;">网页广告至少观看多长时间才能获得奖励</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 游戏奖励配置 -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">🎮</span>
+                        游戏奖励配置
+                    </div>
+                    <button class="btn btn-success" onclick="saveGameConfig()">保存配置</button>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">完成游戏奖励金币</label>
+                            <input type="number" id="game_reward_coins" class="form-input" placeholder="5" min="1" max="100" step="1">
+                            <small style="color: #6b7280;">玩家完成一局游戏获得的基础金币</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">注册奖励金币</label>
+                            <input type="number" id="register_reward_coins" class="form-input" placeholder="100" min="10" max="1000" step="10">
+                            <small style="color: #6b7280;">新用户注册时获得的奖励金币</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">升级奖励金币</label>
+                            <input type="number" id="level_up_reward_coins" class="form-input" placeholder="50" min="5" max="500" step="5">
+                            <small style="color: #6b7280;">玩家等级提升时获得的奖励金币</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">每日最大游戏奖励次数</label>
+                            <input type="number" id="max_daily_game_rewards" class="form-input" placeholder="10" min="1" max="50" step="1">
+                            <small style="color: #6b7280;">每天最多可以通过游戏获得奖励的次数</small>
                         </div>
                     </div>
                 </div>
@@ -887,6 +990,7 @@
             setInterval(updateTime, 1000);
             loadStats();
             loadAds();
+            loadConfigs(); // 加载系统配置
             // 如果当前在用户管理页面，默认加载用户列表
             if (document.getElementById('users-page').classList.contains('active')) {
                 loadUsers();
@@ -1286,6 +1390,103 @@
                 document.getElementById('randomAdResult').textContent = JSON.stringify(result, null, 2);
             } catch (error) {
                 document.getElementById('randomAdResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 加载系统配置
+        async function loadConfigs() {
+            try {
+                const response = await fetch('/admin/api/configs');
+                if (!response.ok) return;
+                
+                const result = await response.json();
+                if (result.code === 200 && result.data) {
+                    // 填充配置表单
+                    result.data.forEach(config => {
+                        const element = document.getElementById(config.config_key);
+                        if (element) {
+                            element.value = config.config_value;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+            }
+        }
+
+        // 保存金币兑换配置
+        async function saveExchangeConfig() {
+            const configs = [
+                { config_key: 'coin_to_rmb_rate', config_value: document.getElementById('coin_to_rmb_rate').value, description: '金币兑换人民币比例（多少金币=1元）' },
+                { config_key: 'withdrawal_min_coins', config_value: document.getElementById('withdrawal_min_coins').value, description: '提现最小金币数量' },
+                { config_key: 'min_withdraw_amount', config_value: document.getElementById('min_withdraw_amount').value, description: '最小提现金额（元）' },
+                { config_key: 'max_withdraw_amount', config_value: document.getElementById('max_withdraw_amount').value, description: '最大提现金额（元）' },
+                { config_key: 'withdrawal_fee_rate', config_value: document.getElementById('withdrawal_fee_rate').value, description: '提现手续费率（百分比，0表示免费）' }
+            ];
+            
+            await saveConfigs(configs, '金币兑换配置');
+        }
+
+        // 保存广告配置
+        async function saveAdConfig() {
+            const configs = [
+                { config_key: 'ad_reward_coins_min', config_value: document.getElementById('ad_reward_coins_min').value, description: '观看广告最小奖励金币' },
+                { config_key: 'ad_reward_coins_max', config_value: document.getElementById('ad_reward_coins_max').value, description: '观看广告最大奖励金币' },
+                { config_key: 'ad_reward_coins_default', config_value: document.getElementById('ad_reward_coins_default').value, description: '观看广告默认奖励金币' },
+                { config_key: 'daily_ad_limit', config_value: document.getElementById('daily_ad_limit').value, description: '每日广告观看上限' },
+                { config_key: 'video_ad_min_duration', config_value: document.getElementById('video_ad_min_duration').value, description: '视频广告最小观看时长（秒）' },
+                { config_key: 'webpage_ad_min_duration', config_value: document.getElementById('webpage_ad_min_duration').value, description: '网页广告最小观看时长（秒）' }
+            ];
+            
+            await saveConfigs(configs, '广告奖励配置');
+        }
+
+        // 保存游戏配置
+        async function saveGameConfig() {
+            const configs = [
+                { config_key: 'game_reward_coins', config_value: document.getElementById('game_reward_coins').value, description: '完成一局游戏奖励金币' },
+                { config_key: 'register_reward_coins', config_value: document.getElementById('register_reward_coins').value, description: '注册奖励金币' },
+                { config_key: 'level_up_reward_coins', config_value: document.getElementById('level_up_reward_coins').value, description: '升级奖励金币' },
+                { config_key: 'max_daily_game_rewards', config_value: document.getElementById('max_daily_game_rewards').value, description: '每日最大游戏奖励次数' }
+            ];
+            
+            await saveConfigs(configs, '游戏奖励配置');
+        }
+
+        // 通用保存配置函数
+        async function saveConfigs(configs, configType) {
+            try {
+                // 验证配置值
+                for (const config of configs) {
+                    if (!config.config_value || config.config_value === '') {
+                        alert(`请填写完整的${configType}信息`);
+                        return;
+                    }
+                    
+                    const value = parseFloat(config.config_value);
+                    if (isNaN(value) || value < 0) {
+                        alert(`${config.description}必须是有效的正数`);
+                        return;
+                    }
+                }
+
+                const response = await fetch('/admin/api/configs', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(configs)
+                });
+                
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    alert(`${configType}保存成功！`);
+                    // 重新加载统计数据以反映配置变更
+                    loadStats();
+                } else {
+                    alert('保存失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('保存失败: ' + error.message);
             }
         }
     </script>

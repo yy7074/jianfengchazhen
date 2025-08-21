@@ -44,7 +44,7 @@ object UserManager {
     fun getCurrentUser(): User? = currentUser
     
     /**
-     * 获取设备ID
+     * 获取设备ID（固定唯一，不包含随机数）
      */
     private fun getDeviceId(context: Context): String {
         val savedDeviceId = sharedPrefs.getString(KEY_DEVICE_ID, null)
@@ -52,16 +52,17 @@ object UserManager {
             return savedDeviceId
         }
         
-        // 生成设备ID（使用Android ID + 随机数确保唯一性）
+        // 使用Android ID生成固定的设备ID
         val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
         val deviceId = if (androidId.isNullOrEmpty()) {
-            "device_${System.currentTimeMillis()}_${Random.nextInt(1000, 9999)}"
+            "device_${System.currentTimeMillis()}"
         } else {
-            "device_${androidId}_${Random.nextInt(100, 999)}"
+            "device_${androidId}"
         }
         
         // 保存设备ID
         sharedPrefs.edit().putString(KEY_DEVICE_ID, deviceId).apply()
+        Log.d(TAG, "生成设备ID: $deviceId")
         return deviceId
     }
     
@@ -107,11 +108,15 @@ object UserManager {
             
             if (response.isSuccessful && response.body()?.code == 200) {
                 val userData = response.body()?.data
-                val user = User(
-                    id = (userData as? Map<String, Any>)?.get("user_id")?.toString() ?: "0",
+                Log.d(TAG, "注册响应原始数据: $userData")
+                Log.d(TAG, "数据类型: ${userData?.javaClass?.simpleName}")
+                
+                // 直接使用Gson解析的User对象
+                val user = userData ?: User(
+                    id = "0",
                     deviceId = deviceId,
                     nickname = nickname,
-                    coins = ((userData as? Map<String, Any>)?.get("coins") as? Number)?.toInt() ?: 100,
+                    coins = 100,
                     level = 1
                 )
                 
@@ -142,12 +147,15 @@ object UserManager {
             
             if (response.isSuccessful && response.body()?.code == 200) {
                 val userData = response.body()?.data
-                val user = User(
-                    id = (userData as? Map<String, Any>)?.get("user_id")?.toString() ?: "0",
+                Log.d(TAG, "登录响应数据: $userData")
+                
+                // 直接使用Gson解析的User对象
+                val user = userData ?: User(
+                    id = "0",
                     deviceId = deviceId,
-                    nickname = (userData as? Map<String, Any>)?.get("nickname")?.toString() ?: "用户",
-                    coins = ((userData as? Map<String, Any>)?.get("coins") as? Number)?.toInt() ?: 0,
-                    level = ((userData as? Map<String, Any>)?.get("level") as? Number)?.toInt() ?: 1
+                    nickname = "用户",
+                    coins = 0,
+                    level = 1
                 )
                 
                 // 更新本地用户信息
@@ -242,6 +250,15 @@ object UserManager {
         }
     }
     
+    /**
+     * 更新用户信息
+     */
+    fun updateUserInfo(user: User) {
+        currentUser = user
+        saveUserToPrefs(user)
+        Log.d(TAG, "用户信息已更新: ${user.nickname}")
+    }
+
     /**
      * 清除用户数据（登出）
      */

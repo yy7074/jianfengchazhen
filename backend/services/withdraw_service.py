@@ -20,6 +20,8 @@ class WithdrawService:
         min_amount = ConfigService.get_min_withdraw_amount(db)
         max_amount = ConfigService.get_max_withdraw_amount(db)
         coin_rate = ConfigService.get_coin_to_rmb_rate(db)
+        min_coins = ConfigService.get_withdrawal_min_coins(db)
+        fee_rate = ConfigService.get_withdrawal_fee_rate(db)
         
         # 验证提现金额
         if withdraw_data.amount < min_amount:
@@ -28,14 +30,24 @@ class WithdrawService:
         if withdraw_data.amount > max_amount:
             return {"success": False, "message": f"提现金额不能超过{max_amount}元"}
         
-        # 计算需要消耗的金币
-        coins_needed = withdraw_data.amount * coin_rate
+        # 计算需要消耗的金币（包含手续费）
+        base_coins = ConfigService.calculate_coins_needed(db, withdraw_data.amount)
+        fee_coins = base_coins * fee_rate / 100 if fee_rate > 0 else 0
+        coins_needed = base_coins + fee_coins
+        
+        # 验证用户金币是否达到最小提现要求
+        if user.coins < min_coins:
+            return {
+                "success": False, 
+                "message": f"金币余额不足，最少需要{min_coins}金币才能提现，当前余额{user.coins}金币"
+            }
         
         # 验证用户金币余额
         if user.coins < coins_needed:
+            fee_message = f"（含手续费{fee_coins:.2f}金币）" if fee_rate > 0 else ""
             return {
                 "success": False, 
-                "message": f"金币余额不足，需要{coins_needed}金币，当前余额{user.coins}金币"
+                "message": f"金币余额不足，需要{coins_needed:.2f}金币{fee_message}，当前余额{user.coins}金币"
             }
         
         # 检查是否有未处理的提现申请
@@ -71,13 +83,18 @@ class WithdrawService:
         db.commit()
         db.refresh(withdraw_request)
         
+        # 构建返回信息
+        fee_message = f"，手续费{fee_coins:.2f}金币" if fee_rate > 0 else ""
+        
         return {
             "success": True,
-            "message": "提现申请提交成功，请等待审核",
+            "message": f"提现申请提交成功，请等待审核。消耗金币{coins_needed:.2f}{fee_message}",
             "data": {
                 "request_id": withdraw_request.id,
                 "amount": float(withdraw_request.amount),
                 "coins_used": float(withdraw_request.coins_used),
+                "fee_coins": float(fee_coins),
+                "fee_rate": float(fee_rate),
                 "status": withdraw_request.status.value
             }
         }

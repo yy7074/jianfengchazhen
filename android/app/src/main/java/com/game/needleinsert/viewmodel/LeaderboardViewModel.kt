@@ -41,7 +41,8 @@ class LeaderboardViewModel : ViewModel() {
                 val response = apiService.getLeaderboard("Bearer dummy_token")
                 
                 if (response.isSuccessful && response.body()?.code == 200) {
-                    val leaderboardData = response.body()?.data as? List<Map<String, Any>>
+                    val responseData = response.body()?.data as? Map<String, Any>
+                    val leaderboardData = responseData?.get("leaderboard") as? List<Map<String, Any>>
                     if (leaderboardData != null) {
                         val currentUser = UserManager.getCurrentUser()
                         val players = leaderboardData.mapIndexed { index, playerMap ->

@@ -77,12 +77,14 @@ data class GameData(
 
 // API相关模型
 data class User(
-    @SerializedName("id") val id: String = "",
+    @SerializedName("user_id") val id: String = "",
     @SerializedName("device_id") val deviceId: String = "",
     @SerializedName("nickname") val nickname: String = "",
     @SerializedName("coins") val coins: Int = 0,
     @SerializedName("level") val level: Int = 1,
-    @SerializedName("total_score") val totalScore: Int = 0
+    @SerializedName("best_score") val bestScore: Int = 0,
+    @SerializedName("game_count") val gameCount: Int = 0,
+    @SerializedName("total_coins") val totalCoins: Float = 0.0f
 )
 
 data class UserRegister(
@@ -141,7 +143,7 @@ data class AdListRequest(
 
 data class AdReward(
     @SerializedName("coins") val coins: Int,
-    @SerializedName("message") val message: String
+    @SerializedName("message") val message: String? = "观看完成"
 )
 
 // 广告观看状态

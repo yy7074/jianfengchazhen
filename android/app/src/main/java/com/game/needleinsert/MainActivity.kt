@@ -26,6 +26,8 @@ import com.game.needleinsert.ui.GameScreen
 import com.game.needleinsert.ui.SettingsScreen
 import com.game.needleinsert.ui.LeaderboardScreen
 import com.game.needleinsert.ui.WithdrawScreen
+import com.game.needleinsert.ui.UserProfileScreen
+import com.game.needleinsert.ui.LoginScreen
 import com.game.needleinsert.ui.theme.NeedleInsertTheme
 import com.game.needleinsert.ui.theme.GameColors
 import com.game.needleinsert.ui.components.AnimatedBackground
@@ -37,7 +39,13 @@ import android.app.Activity
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.game.needleinsert.utils.UserManager
+import com.game.needleinsert.viewmodel.UserViewModel
+import com.game.needleinsert.model.User
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.lifecycle.lifecycleScope
 
 class MainActivity : ComponentActivity() {
@@ -47,11 +55,6 @@ class MainActivity : ComponentActivity() {
         
         // 初始化用户管理器
         UserManager.init(this)
-        
-        // 自动注册或登录用户
-        lifecycleScope.launch {
-            UserManager.autoRegisterOrLogin(this@MainActivity)
-        }
         
         setContent {
             NeedleInsertTheme {
@@ -63,14 +66,43 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainNavigation() {
-    var currentScreen by remember { mutableStateOf("menu") }
+    val context = LocalContext.current
+    // 添加登录状态管理
+    val userViewModel: UserViewModel = viewModel()
+    val userState by userViewModel.uiState.collectAsState()
+    var currentScreen by remember { mutableStateOf("login") }
+    
+    // 启动时自动登录
+    LaunchedEffect(Unit) {
+        UserManager.init(context)
+        val currentUser = UserManager.getCurrentUser()
+        if (currentUser != null) {
+            // 如果本地有用户信息，加载到ViewModel并跳转主页
+            userViewModel.loadUserInfo()
+            currentScreen = "menu"
+        } else {
+            // 自动尝试注册/登录
+            userViewModel.autoLogin(context)
+        }
+    }
+    
+    // 监听用户登录状态变化
+    LaunchedEffect(userState.user) {
+        if (userState.user != null) {
+            currentScreen = "menu"
+        }
+    }
     
     when (currentScreen) {
+        "login" -> LoginScreen(
+            onLoginSuccess = { currentScreen = "menu" }
+        )
         "menu" -> MainMenuScreen(
             onStartGame = { currentScreen = "game" },
             onSettings = { currentScreen = "settings" },
             onLeaderboard = { currentScreen = "leaderboard" },
-            onWithdraw = { currentScreen = "withdraw" }
+            onWithdraw = { currentScreen = "withdraw" },
+            onProfile = { currentScreen = "profile" }
         )
         "game" -> GameScreen(
             onBackPressed = { currentScreen = "menu" }
@@ -84,6 +116,10 @@ fun MainNavigation() {
         "withdraw" -> WithdrawScreen(
             onBack = { currentScreen = "menu" }
         )
+        "profile" -> UserProfileScreen(
+            onBack = { currentScreen = "menu" },
+            onLogout = { currentScreen = "login" }
+        )
     }
 }
 
@@ -92,9 +128,17 @@ fun MainMenuScreen(
     onStartGame: () -> Unit,
     onSettings: () -> Unit,
     onLeaderboard: () -> Unit,
-    onWithdraw: () -> Unit
+    onWithdraw: () -> Unit,
+    onProfile: () -> Unit
 ) {
     val context = LocalContext.current
+    val userViewModel: UserViewModel = viewModel()
+    val userState by userViewModel.uiState.collectAsState()
+    
+    // 加载用户信息
+    LaunchedEffect(Unit) {
+        userViewModel.loadUserInfo()
+    }
     
     // 启动广告的函数
     val startAd = {
@@ -190,8 +234,18 @@ fun MainMenuScreen(
                 fontSize = 16.sp,
                 color = GameColors.GoldYellow.copy(alpha = 0.9f),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 60.dp)
+                modifier = Modifier.padding(bottom = 20.dp)
             )
+            
+            // 用户信息区域
+            UserInfoCard(
+                user = userState.user,
+                isLoading = userState.isLoading,
+                onProfileClick = onProfile,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(30.dp))
             
             // 主菜单按钮 - 使用动画按钮
             PulsingButton(
@@ -345,6 +399,144 @@ fun AnimatedMenuButton(
             fontWeight = FontWeight.Medium,
             color = Color.White
         )
+    }
+}
+
+@Composable
+fun UserInfoCard(
+    user: User?,
+    isLoading: Boolean,
+    onProfileClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.9f)
+        ),
+        shape = RoundedCornerShape(20.dp),
+        onClick = onProfileClick
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isLoading -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = GameColors.Primary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "正在登录...",
+                            fontSize = 16.sp,
+                            color = GameColors.TextPrimary
+                        )
+                    }
+                }
+                user != null -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 用户信息
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 头像
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(GameColors.Primary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "🎮",
+                                    fontSize = 20.sp
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.width(12.dp))
+                            
+                            Column {
+                                Text(
+                                    text = user.nickname,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GameColors.Primary
+                                )
+                                Text(
+                                    text = "等级 ${user.level}",
+                                    fontSize = 12.sp,
+                                    color = GameColors.TextSecondary
+                                )
+                            }
+                        }
+                        
+                        // 金币显示
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "💰",
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${user.coins}",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GameColors.AccentOrange
+                            )
+                            
+                            Spacer(modifier = Modifier.width(8.dp))
+                            
+                            Text(
+                                text = "👆",
+                                fontSize = 12.sp,
+                                color = GameColors.TextSecondary
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "🎮",
+                            fontSize = 20.sp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "点击登录游戏",
+                            fontSize = 16.sp,
+                            color = GameColors.Primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "👆",
+                            fontSize = 12.sp,
+                            color = GameColors.TextSecondary
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

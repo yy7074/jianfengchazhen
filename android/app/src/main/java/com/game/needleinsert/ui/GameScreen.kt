@@ -959,7 +959,7 @@ fun AdRewardDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = reward.message,
+                    text = reward.message ?: "观看完成",
                     fontSize = 16.sp,
                     textAlign = TextAlign.Center
                 )

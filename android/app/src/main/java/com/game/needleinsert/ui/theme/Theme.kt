@@ -18,6 +18,8 @@ import androidx.core.view.WindowCompat
 
 // 游戏主题色彩
 object GameColors {
+    // 主要颜色
+    val Primary = Color(0xFF2196F3)  // 主要蓝色
     val PrimaryBlue = Color(0xFF2196F3)
     val PrimaryPurple = Color(0xFF9C27B0)
     val SecondaryTeal = Color(0xFF00BCD4)
@@ -34,6 +36,12 @@ object GameColors {
     val ElectricBlue = Color(0xFF7DF9FF)
     val HotPink = Color(0xFFFF1493)
     val LimeGreen = Color(0xFF32CD32)
+    
+    // 背景和文字颜色
+    val Background = Color(0xFF0A0A0A)  // 深色背景
+    val Surface = Color(0xFF1A1A2E)    // 表面颜色
+    val TextPrimary = Color(0xFF1A1A2E)  // 主要文字颜色
+    val TextSecondary = Color(0xFF666666) // 次要文字颜色
 }
 
 private val DarkColorScheme = darkColorScheme(

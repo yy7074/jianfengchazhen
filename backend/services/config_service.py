@@ -84,7 +84,18 @@ class ConfigService:
             ("game_reward_coins", "5", "完成一局游戏奖励金币"),
             ("register_reward_coins", "100", "注册奖励金币"),
             ("level_up_reward_coins", "50", "升级奖励金币"),
-            ("max_daily_game_rewards", "10", "每日最大游戏奖励次数")
+            ("max_daily_game_rewards", "10", "每日最大游戏奖励次数"),
+            # 广告奖励配置
+            ("ad_reward_coins_min", "50", "观看广告最小奖励金币"),
+            ("ad_reward_coins_max", "200", "观看广告最大奖励金币"),
+            ("ad_reward_coins_default", "100", "观看广告默认奖励金币"),
+            ("video_ad_min_duration", "15", "视频广告最小观看时长（秒）"),
+            ("webpage_ad_min_duration", "10", "网页广告最小观看时长（秒）"),
+            # 兑换比例设置
+            ("exchange_rate_enabled", "1", "是否启用动态汇率（1启用，0禁用）"),
+            ("exchange_rate_update_interval", "3600", "汇率更新间隔（秒）"),
+            ("withdrawal_fee_rate", "0", "提现手续费率（百分比，0表示免费）"),
+            ("withdrawal_min_coins", "1000", "提现最小金币数量")
         ]
         
         for key, value, description in default_configs:
@@ -128,4 +139,60 @@ class ConfigService:
     @staticmethod
     def get_register_reward_coins(db: Session) -> float:
         """获取注册奖励金币"""
-        return float(ConfigService.get_config(db, "register_reward_coins", "100")) 
+        return float(ConfigService.get_config(db, "register_reward_coins", "100"))
+    
+    # 新增广告奖励相关配置方法
+    @staticmethod
+    def get_ad_reward_coins_range(db: Session) -> tuple:
+        """获取广告奖励金币范围"""
+        min_coins = float(ConfigService.get_config(db, "ad_reward_coins_min", "50"))
+        max_coins = float(ConfigService.get_config(db, "ad_reward_coins_max", "200"))
+        return min_coins, max_coins
+    
+    @staticmethod
+    def get_ad_reward_coins_default(db: Session) -> float:
+        """获取默认广告奖励金币"""
+        return float(ConfigService.get_config(db, "ad_reward_coins_default", "100"))
+    
+    @staticmethod
+    def get_video_ad_min_duration(db: Session) -> int:
+        """获取视频广告最小观看时长"""
+        return int(ConfigService.get_config(db, "video_ad_min_duration", "15"))
+    
+    @staticmethod
+    def get_webpage_ad_min_duration(db: Session) -> int:
+        """获取网页广告最小观看时长"""
+        return int(ConfigService.get_config(db, "webpage_ad_min_duration", "10"))
+    
+    # 新增兑换比例相关配置方法
+    @staticmethod
+    def get_withdrawal_fee_rate(db: Session) -> float:
+        """获取提现手续费率"""
+        return float(ConfigService.get_config(db, "withdrawal_fee_rate", "0"))
+    
+    @staticmethod
+    def get_withdrawal_min_coins(db: Session) -> float:
+        """获取提现最小金币数量"""
+        return float(ConfigService.get_config(db, "withdrawal_min_coins", "1000"))
+    
+    @staticmethod
+    def is_exchange_rate_enabled(db: Session) -> bool:
+        """是否启用动态汇率"""
+        return ConfigService.get_config(db, "exchange_rate_enabled", "1") == "1"
+    
+    @staticmethod
+    def get_exchange_rate_update_interval(db: Session) -> int:
+        """获取汇率更新间隔"""
+        return int(ConfigService.get_config(db, "exchange_rate_update_interval", "3600"))
+    
+    @staticmethod
+    def calculate_rmb_amount(db: Session, coins: float) -> float:
+        """根据配置计算金币对应的人民币金额"""
+        rate = ConfigService.get_coin_to_rmb_rate(db)
+        return round(coins / rate, 2)
+    
+    @staticmethod
+    def calculate_coins_needed(db: Session, rmb_amount: float) -> float:
+        """根据配置计算人民币对应需要的金币数量"""
+        rate = ConfigService.get_coin_to_rmb_rate(db)
+        return round(rmb_amount * rate, 2) 

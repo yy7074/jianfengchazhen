@@ -167,15 +167,18 @@ fun FullScreenAdPlayer(
         "webpage" -> {
             WebpageAdPlayer(
                 adConfig = adConfig,
+                onAdStarted = {
+                    // 广告开始播放时记录开始时间
+                    AdManager.startWatchingAd()
+                },
                 onAdCompleted = { isCompleted ->
                     coroutineScope.launch {
-                        AdManager.startWatchingAd()
-                        val reward = AdManager.completeAdWatch("1", isCompleted)
+                        val reward = AdManager.completeAdWatch("9", isCompleted)
                         if (reward != null) {
                             if (isCompleted) {
-                                onAdCompleted(reward.coins, reward.message)
+                                onAdCompleted(reward.coins, reward.message ?: "观看完成")
                             } else {
-                                onAdSkipped(reward.coins, reward.message)
+                                onAdSkipped(reward.coins, reward.message ?: "观看完成")
                             }
                         } else {
                             onAdCancelled()
@@ -194,15 +197,18 @@ fun FullScreenAdPlayer(
                 skipTime = adConfig.skipTime,
                 rewardCoins = adConfig.rewardCoins,
                 advertiser = adConfig.advertiser.ifEmpty { "广告商" },
+                onAdStarted = {
+                    // 广告开始播放时记录开始时间
+                    AdManager.startWatchingAd()
+                },
                 onAdCompleted = { isCompleted ->
                     coroutineScope.launch {
-                        AdManager.startWatchingAd()
-                        val reward = AdManager.completeAdWatch("1", isCompleted)
+                        val reward = AdManager.completeAdWatch("9", isCompleted)
                         if (reward != null) {
                             if (isCompleted) {
-                                onAdCompleted(reward.coins, reward.message)
+                                onAdCompleted(reward.coins, reward.message ?: "观看完成")
                             } else {
-                                onAdSkipped(reward.coins, reward.message)
+                                onAdSkipped(reward.coins, reward.message ?: "观看完成")
                             }
                         } else {
                             onAdCancelled()

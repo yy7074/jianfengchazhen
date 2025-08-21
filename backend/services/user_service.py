@@ -4,6 +4,7 @@ from models import User, CoinTransaction, TransactionType, UserStatus
 from schemas import UserRegister, UserUpdate
 from typing import Optional
 from datetime import datetime
+from decimal import Decimal
 import hashlib
 
 class UserService:
@@ -76,9 +77,12 @@ class UserService:
         if not user:
             return False
         
+        # 转换为Decimal类型
+        amount_decimal = Decimal(str(amount))
+        
         # 更新用户金币
-        user.coins += amount
-        user.total_coins += amount
+        user.coins += amount_decimal
+        user.total_coins += amount_decimal
         
         # 记录交易
         transaction = CoinTransaction(
@@ -99,11 +103,12 @@ class UserService:
                      description: str = None, related_id: int = None) -> bool:
         """扣除用户金币"""
         user = db.query(User).filter(User.id == user_id).first()
-        if not user or user.coins < amount:
+        amount_decimal = Decimal(str(amount))
+        if not user or user.coins < amount_decimal:
             return False
         
         # 更新用户金币
-        user.coins -= amount
+        user.coins -= amount_decimal
         
         # 记录交易
         transaction = CoinTransaction(
