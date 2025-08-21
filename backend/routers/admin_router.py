@@ -164,10 +164,31 @@ async def get_users_list(
     skip = (page - 1) * size
     users = query.order_by(User.register_time.desc()).offset(skip).limit(size).all()
     
+    # 手动构建用户数据，避免Pydantic验证问题
+    users_data = []
+    for user in users:
+        user_data = {
+            "id": user.id,
+            "device_id": user.device_id,
+            "device_name": user.device_name,
+            "username": user.username,
+            "nickname": user.nickname,
+            "avatar": user.avatar,
+            "coins": float(user.coins or 0),
+            "total_coins": float(user.total_coins or 0),
+            "level": user.level or 1,
+            "experience": user.experience or 0,
+            "game_count": user.game_count or 0,
+            "best_score": user.best_score or 0,
+            "last_login_time": user.last_login_time.isoformat() if user.last_login_time else None,
+            "register_time": user.register_time.isoformat() if user.register_time else None
+        }
+        users_data.append(user_data)
+    
     return BaseResponse(
         message="获取成功",
         data={
-            "items": [UserInfo.from_orm(u).dict() for u in users],
+            "items": users_data,
             "total": total,
             "page": page,
             "size": size,
@@ -183,9 +204,26 @@ async def get_ads_list(db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="需要管理员权限")
     
     ads = AdService.get_all_ad_configs(db)
+    # 临时简化，避免Pydantic验证问题
+    ads_data = []
+    for ad in ads:
+        ad_data = {
+            "id": ad.id,
+            "name": ad.name,
+            "ad_type": ad.ad_type or "video",
+            "video_url": ad.video_url,
+            "webpage_url": ad.webpage_url,
+            "image_url": ad.image_url,
+            "duration": ad.duration,
+            "reward_coins": float(ad.reward_coins or 0),
+            "weight": ad.weight or 1,
+            "status": 1 if ad.status == 'ACTIVE' else 0
+        }
+        ads_data.append(ad_data)
+    
     return BaseResponse(
         message="获取成功",
-        data=[AdConfigInfo.from_orm(ad).dict() for ad in ads]
+        data=ads_data
     )
 
 @router.post("/api/ads")

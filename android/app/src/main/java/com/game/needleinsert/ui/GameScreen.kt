@@ -28,6 +28,11 @@ import com.game.needleinsert.model.*
 import com.game.needleinsert.viewmodel.GameViewModel
 import com.game.needleinsert.ui.theme.GameColors
 import com.game.needleinsert.ui.components.AnimatedBackground
+import com.game.needleinsert.ui.FullScreenAdActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -45,6 +50,8 @@ fun GameScreen(
     // 初始化游戏
     LaunchedEffect(Unit) {
         viewModel.initGame(screenWidth, screenHeight)
+        // 重置广告状态，防止从全屏广告返回时状态异常
+        viewModel.resetAdState()
     }
     
     AnimatedBackground(
@@ -115,17 +122,59 @@ fun GameScreen(
             )
         }
         
-        // 广告播放界面
-        if (viewModel.gameData.adState == AdState.READY || viewModel.gameData.adState == AdState.PLAYING) {
-            viewModel.currentAd?.let { ad ->
-                AdPlayerDialog(
-                    ad = ad,
-                    adState = viewModel.gameData.adState,
-                    onStartPlay = { viewModel.startPlayingAd() },
-                    onComplete = { viewModel.completeAdWatch() },
-                    onCancel = { viewModel.cancelAdWatch() }
-                )
-            }
+        // 广告播放界面 - 全屏广告确认对话框
+        if (viewModel.gameData.adState == AdState.READY) {
+            val context = LocalContext.current
+            
+            AlertDialog(
+                onDismissRequest = { viewModel.cancelAdWatch() },
+                title = {
+                    Text(
+                        text = "🎬 开始观看广告",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    viewModel.currentAd?.let { ad ->
+                        Column {
+                            Text(
+                                text = "即将全屏播放广告视频",
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "💰 观看完整可获得 ${ad.rewardCoins} 金币",
+                                fontSize = 14.sp,
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.currentAd?.let { ad ->
+                                // 启动全屏广告Activity
+                                FullScreenAdActivity.startForResult(context as Activity, ad, 1002)
+                                // 标记为正在播放状态并关闭对话框
+                                viewModel.startPlayingAd()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text("开始观看")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.cancelAdWatch() }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
         
         // 广告奖励提示

@@ -3,6 +3,7 @@ package com.game.needleinsert.utils
 import android.content.Context
 import android.util.Log
 import com.game.needleinsert.model.*
+import com.game.needleinsert.network.RetrofitClient
 import kotlinx.coroutines.*
 import kotlin.random.Random
 
@@ -15,7 +16,7 @@ object AdManager {
     // 缓存的广告列表（从后端获取）
     private var cachedAds: List<AdConfig> = emptyList()
     private var adsCacheTime: Long = 0
-    private val cacheExpireTime = 10 * 60 * 1000L // 10分钟缓存过期
+    private val cacheExpireTime = 30 * 1000L // 30秒缓存过期，方便测试
     
     // 模拟广告数据（作为后备数据）
     private val fallbackAds = listOf(
@@ -23,7 +24,9 @@ object AdManager {
             id = "ad1", 
             title = "精品游戏推荐", 
             description = "发现更多好玩的游戏",
-            videoUrl = "https://example.com/video1.mp4", 
+            adType = "video",
+            videoUrl = "https://example.com/video1.mp4",
+            webpageUrl = "",
             imageUrl = "https://example.com/image1.jpg", 
             rewardCoins = 80,
             duration = 30,
@@ -34,7 +37,9 @@ object AdManager {
             id = "ad2", 
             title = "热门应用下载", 
             description = "最新最热门的手机应用",
-            videoUrl = "https://example.com/video2.mp4", 
+            adType = "video",
+            videoUrl = "https://example.com/video2.mp4",
+            webpageUrl = "",
             imageUrl = "https://example.com/image2.jpg", 
             rewardCoins = 100,
             duration = 25,
@@ -45,7 +50,9 @@ object AdManager {
             id = "ad3", 
             title = "限时特价商品", 
             description = "超值优惠，不容错过",
-            videoUrl = "https://example.com/video3.mp4", 
+            adType = "video",
+            videoUrl = "https://example.com/video3.mp4",
+            webpageUrl = "",
             imageUrl = "https://example.com/image3.jpg", 
             rewardCoins = 120,
             duration = 35,
@@ -56,7 +63,9 @@ object AdManager {
             id = "ad4", 
             title = "新用户专享福利", 
             description = "注册即送大礼包",
-            videoUrl = "https://example.com/video4.mp4", 
+            adType = "video",
+            videoUrl = "https://example.com/video4.mp4",
+            webpageUrl = "",
             imageUrl = "https://example.com/image4.jpg", 
             rewardCoins = 150,
             duration = 28,
@@ -85,21 +94,61 @@ object AdManager {
                 return cachedAds
             }
             
-            // TODO: 实际调用后端API
-            // val request = AdListRequest(userId, deviceId, userLevel, lastAdRequestTime)
-            // val response = RetrofitClient.getApiService().getAvailableAds("token", request)
-            // val ads = RetrofitClient.getResponseData(response) ?: fallbackAds
+            // 实际调用后端API
+            val response = RetrofitClient.getApiService().getAvailableAds("Bearer dummy_token", "1") // 使用固定用户ID
             
-            // 模拟网络请求延迟
-            delay(800)
+            if (response.isSuccessful) {
+                val responseData = RetrofitClient.getResponseData(response)
+                if (responseData != null) {
+                    @Suppress("UNCHECKED_CAST")
+                    val adsData = responseData["ads"] as? List<Map<String, Any>>
+                    if (adsData != null && adsData.isNotEmpty()) {
+                        // 将Map转换为AdConfig对象
+                        val ads = adsData.mapNotNull { adData ->
+                            try {
+                                AdConfig(
+                                    id = adData["id"].toString(),
+                                    title = adData["name"] as? String ?: "",
+                                    description = adData["description"] as? String ?: "",
+                                    adType = adData["ad_type"] as? String ?: "video",
+                                    videoUrl = adData["video_url"] as? String ?: "",
+                                    webpageUrl = adData["webpage_url"] as? String ?: "",
+                                    imageUrl = adData["image_url"] as? String ?: "",
+                                    rewardCoins = (adData["reward_coins"] as? Number)?.toInt() ?: 0,
+                                    duration = (adData["duration"] as? Number)?.toInt() ?: 30,
+                                    skipTime = (adData["min_watch_duration"] as? Number)?.toInt() ?: 15,
+                                    isActive = true,
+                                    weight = (adData["weight"] as? Number)?.toInt() ?: 1,
+                                    dailyLimit = (adData["daily_limit"] as? Number)?.toInt() ?: 10,
+                                    advertiser = adData["advertiser"] as? String ?: "广告商"
+                                )
+                            } catch (e: Exception) {
+                                Log.e("AdManager", "解析广告数据失败: ${e.message}")
+                                null
+                            }
+                        }
+                        
+                        if (ads.isNotEmpty()) {
+                            // 更新缓存
+                            cachedAds = ads
+                            adsCacheTime = currentTime
+                            Log.d("AdManager", "从后端获取到 ${ads.size} 个广告")
+                            return ads
+                        }
+                    }
+                }
+            }
             
-            // 模拟后端返回的广告配置（根据用户等级和行为）
+            Log.w("AdManager", "后端API调用失败，使用后备广告")
+            // API失败时使用后备广告
             val backendAds = when {
                 userLevel >= 5 -> fallbackAds + AdConfig(
                     id = "vip_ad1",
                     title = "VIP专属福利",
                     description = "高级用户专享超级奖励",
+                    adType = "video",
                     videoUrl = "https://example.com/vip_video.mp4",
+                    webpageUrl = "",
                     imageUrl = "https://example.com/vip_image.jpg",
                     rewardCoins = 200,
                     duration = 20,
@@ -117,7 +166,7 @@ object AdManager {
             cachedAds = activeAds
             adsCacheTime = currentTime
             
-            Log.d("AdManager", "从后端获取到 ${activeAds.size} 个广告")
+            Log.d("AdManager", "使用后备广告: ${activeAds.size} 个")
             activeAds
             
         } catch (e: Exception) {

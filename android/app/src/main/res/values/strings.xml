@@ -11,5 +11,5 @@
     <string name="resume">继续</string>
     <string name="level">第 %d 关</string>
     <string name="score">分数: %d</string>
-    <string name="needles_count">%d/%d</string>
+    <string name="needles_count" formatted="false">%d/%d</string>
 </resources>

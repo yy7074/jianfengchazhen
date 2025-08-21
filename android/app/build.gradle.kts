@@ -69,6 +69,11 @@ dependencies {
     // 协程
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
+    // ExoPlayer 视频播放
+    implementation("androidx.media3:media3-exoplayer:1.2.1")
+    implementation("androidx.media3:media3-ui:1.2.1")
+    implementation("androidx.media3:media3-common:1.2.1")
+    
     // SharedPreferences
     implementation("androidx.preference:preference-ktx:1.2.1")
     

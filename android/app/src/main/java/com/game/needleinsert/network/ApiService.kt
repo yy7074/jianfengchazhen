@@ -16,12 +16,24 @@ interface ApiService {
     @GET("api/user/profile")
     suspend fun getUserProfile(@Header("Authorization") token: String): Response<BaseResponse<User>>
     
+    @GET("api/user/{user_id}/stats")
+    suspend fun getUserStats(@Path("user_id") userId: String): Response<BaseResponse<Map<String, Any>>>
+    
+    @GET("api/user/{user_id}/withdraws")
+    suspend fun getWithdrawHistory(@Path("user_id") userId: String): Response<BaseResponse<List<Map<String, Any>>>>
+    
+    @POST("api/user/{user_id}/withdraw")
+    suspend fun submitWithdrawRequest(
+        @Path("user_id") userId: String,
+        @Body request: Map<String, Any>
+    ): Response<BaseResponse<Map<String, Any>>>
+    
     // 广告相关接口
-    @POST("api/ad/list")
+    @GET("api/ad/available/{user_id}")
     suspend fun getAvailableAds(
         @Header("Authorization") token: String,
-        @Body request: AdListRequest
-    ): Response<BaseResponse<List<AdConfig>>>
+        @Path("user_id") userId: String
+    ): Response<BaseResponse<Map<String, Any>>>
     
     @GET("api/ad/random")
     suspend fun getRandomAd(@Header("Authorization") token: String): Response<BaseResponse<AdConfig>>

@@ -23,15 +23,36 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.scale
 import com.game.needleinsert.ui.GameScreen
+import com.game.needleinsert.ui.SettingsScreen
+import com.game.needleinsert.ui.LeaderboardScreen
+import com.game.needleinsert.ui.WithdrawScreen
 import com.game.needleinsert.ui.theme.NeedleInsertTheme
 import com.game.needleinsert.ui.theme.GameColors
 import com.game.needleinsert.ui.components.AnimatedBackground
 import com.game.needleinsert.ui.components.PulsingButton
+import com.game.needleinsert.ui.FullScreenAdActivity
+import com.game.needleinsert.model.AdConfig
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import com.game.needleinsert.utils.UserManager
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // 初始化用户管理器
+        UserManager.init(this)
+        
+        // 自动注册或登录用户
+        lifecycleScope.launch {
+            UserManager.autoRegisterOrLogin(this@MainActivity)
+        }
+        
         setContent {
             NeedleInsertTheme {
                 MainNavigation()
@@ -46,18 +67,59 @@ fun MainNavigation() {
     
     when (currentScreen) {
         "menu" -> MainMenuScreen(
-            onStartGame = { currentScreen = "game" }
+            onStartGame = { currentScreen = "game" },
+            onSettings = { currentScreen = "settings" },
+            onLeaderboard = { currentScreen = "leaderboard" },
+            onWithdraw = { currentScreen = "withdraw" }
         )
         "game" -> GameScreen(
             onBackPressed = { currentScreen = "menu" }
+        )
+        "settings" -> SettingsScreen(
+            onBack = { currentScreen = "menu" }
+        )
+        "leaderboard" -> LeaderboardScreen(
+            onBack = { currentScreen = "menu" }
+        )
+        "withdraw" -> WithdrawScreen(
+            onBack = { currentScreen = "menu" }
         )
     }
 }
 
 @Composable
 fun MainMenuScreen(
-    onStartGame: () -> Unit
+    onStartGame: () -> Unit,
+    onSettings: () -> Unit,
+    onLeaderboard: () -> Unit,
+    onWithdraw: () -> Unit
 ) {
+    val context = LocalContext.current
+    
+    // 启动广告的函数
+    val startAd = {
+        // 创建示例广告配置
+        val sampleAd = AdConfig(
+            id = "sample_ad_1",
+            title = "游戏推广广告",
+            description = "观看精彩广告视频获得金币奖励！",
+            adType = "video",
+            videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            webpageUrl = "",
+            imageUrl = "",
+            thumbnailUrl = "",
+            rewardCoins = 50,
+            duration = 30,
+            skipTime = 15,
+            isActive = true,
+            weight = 1,
+            dailyLimit = 10,
+            clickUrl = "",
+            advertiser = "游戏广告商"
+        )
+        
+        FullScreenAdActivity.startForResult(context as Activity, sampleAd, 1001)
+    }
     // 标题动画
     val infiniteTransition = rememberInfiniteTransition(label = "title_animation")
     
@@ -155,16 +217,24 @@ fun MainMenuScreen(
             Spacer(modifier = Modifier.height(20.dp))
             
             AnimatedMenuButton(
+                text = "🎬 观看广告",
+                onClick = startAd,
+                backgroundColor = GameColors.AccentPink
+            )
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            AnimatedMenuButton(
                 text = "🏆 排行榜",
-                onClick = { /* TODO: 实现排行榜 */ },
+                onClick = onLeaderboard,
                 backgroundColor = GameColors.AccentOrange
             )
             
             Spacer(modifier = Modifier.height(20.dp))
             
             AnimatedMenuButton(
-                text = "🎬 观看广告",
-                onClick = { /* TODO: 实现广告中心 */ },
+                text = "💰 提现",
+                onClick = onWithdraw,
                 backgroundColor = GameColors.AccentPink
             )
             
@@ -172,7 +242,7 @@ fun MainMenuScreen(
             
             AnimatedMenuButton(
                 text = "⚙️ 设置",
-                onClick = { /* TODO: 实现设置 */ },
+                onClick = onSettings,
                 backgroundColor = GameColors.DeepPurple
             )
             

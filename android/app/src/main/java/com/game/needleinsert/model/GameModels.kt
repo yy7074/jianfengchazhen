@@ -87,6 +87,7 @@ data class User(
 
 data class UserRegister(
     @SerializedName("device_id") val deviceId: String,
+    @SerializedName("device_name") val deviceName: String? = null,
     @SerializedName("nickname") val nickname: String = "玩家${System.currentTimeMillis() % 10000}"
 )
 
@@ -106,7 +107,9 @@ data class AdConfig(
     @SerializedName("id") val id: String,
     @SerializedName("title") val title: String,
     @SerializedName("description") val description: String = "",
-    @SerializedName("video_url") val videoUrl: String,
+    @SerializedName("ad_type") val adType: String = "video", // 广告类型：video=视频广告, webpage=网页广告
+    @SerializedName("video_url") val videoUrl: String = "",
+    @SerializedName("webpage_url") val webpageUrl: String = "", // 网页跳转URL
     @SerializedName("image_url") val imageUrl: String,
     @SerializedName("thumbnail_url") val thumbnailUrl: String = "",
     @SerializedName("reward_coins") val rewardCoins: Int,

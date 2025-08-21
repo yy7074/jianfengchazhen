@@ -35,6 +35,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(String(64), unique=True, nullable=False, comment="设备唯一标识")
+    device_name = Column(String(100), comment="设备名称（手机型号等）")
     username = Column(String(50), unique=True, comment="用户名（可选）")
     nickname = Column(String(50), comment="昵称")
     avatar = Column(String(255), comment="头像URL")
@@ -59,8 +60,11 @@ class AdConfig(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False, comment="广告名称")
-    video_url = Column(String(500), nullable=False, comment="视频文件URL")
-    duration = Column(Integer, nullable=False, comment="视频时长（秒）")
+    ad_type = Column(String(20), default="video", comment="广告类型：video=视频广告, webpage=网页广告")
+    video_url = Column(String(500), comment="视频文件URL（视频广告用）")
+    webpage_url = Column(String(500), comment="网页跳转URL（网页广告用）")
+    image_url = Column(String(500), comment="广告图片URL")
+    duration = Column(Integer, nullable=False, comment="展示时长（秒）")
     reward_coins = Column(DECIMAL(8, 2), default=0, comment="观看奖励金币")
     daily_limit = Column(Integer, default=10, comment="每日观看限制")
     min_watch_duration = Column(Integer, default=15, comment="最少观看时长（秒）")

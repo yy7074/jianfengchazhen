@@ -4,11 +4,11 @@ import os
 
 class Settings(BaseSettings):
     # 数据库配置
-    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/game_db"
+    DATABASE_URL: str = "mysql+pymysql://root:123456@localhost:3306/game_db"
     DATABASE_HOST: str = "localhost"
     DATABASE_PORT: int = 3306
     DATABASE_USER: str = "root"
-    DATABASE_PASSWORD: str = "password"
+    DATABASE_PASSWORD: str = "123456"
     DATABASE_NAME: str = "game_db"
     
     # Redis配置

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, or_
 from models import AdConfig, AdWatchRecord, User, AdStatus, TransactionType
 from schemas import AdConfigCreate, AdConfigUpdate, AdWatchRequest
 from services.user_service import UserService
@@ -236,4 +236,63 @@ class AdService:
                 "total_views": total_views,
                 "today_coins": float(today_coins),
                 "total_coins": float(total_coins)
-            } 
+            }
+    
+    @staticmethod
+    def init_default_ads(db: Session):
+        """初始化默认广告配置"""
+        # 检查是否已有广告配置
+        existing_ads = db.query(AdConfig).count()
+        if existing_ads > 0:
+            return
+        
+        # 示例广告视频配置（使用公开的测试视频）
+        default_ads = [
+            {
+                "name": "游戏推广广告",
+                "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                "duration": 30,
+                "reward_coins": 50,
+                "daily_limit": 5,
+                "min_watch_duration": 15,
+                "weight": 3,
+                "status": AdStatus.ACTIVE
+            },
+            {
+                "name": "应用下载广告", 
+                "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+                "duration": 25,
+                "reward_coins": 80,
+                "daily_limit": 3,
+                "min_watch_duration": 20,
+                "weight": 2,
+                "status": AdStatus.ACTIVE
+            },
+            {
+                "name": "品牌推广广告",
+                "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                "duration": 15,
+                "reward_coins": 30,
+                "daily_limit": 10,
+                "min_watch_duration": 10,
+                "weight": 5,
+                "status": AdStatus.ACTIVE
+            },
+            {
+                "name": "购物广告",
+                "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", 
+                "duration": 20,
+                "reward_coins": 60,
+                "daily_limit": 4,
+                "min_watch_duration": 15,
+                "weight": 3,
+                "status": AdStatus.ACTIVE
+            }
+        ]
+        
+        for ad_data in default_ads:
+            ad = AdConfig(**ad_data)
+            db.add(ad)
+        
+        db.commit()
+        print("✅ 默认广告配置初始化完成") 

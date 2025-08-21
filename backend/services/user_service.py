@@ -19,6 +19,7 @@ class UserService:
         # 创建新用户
         user = User(
             device_id=user_data.device_id,
+            device_name=user_data.device_name,
             nickname=user_data.nickname or f"用户{user_data.device_id[-6:]}",
             coins=0,
             total_coins=0

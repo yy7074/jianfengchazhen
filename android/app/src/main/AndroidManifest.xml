@@ -36,9 +36,9 @@
             android:name="com.game.needleinsert.ui.FullScreenAdActivity"
             android:exported="false"
             android:label="激励视频广告"
-            android:theme="@style/Theme.Jianfengchazhen"
+            android:theme="@style/Theme.FullscreenAd"
             android:screenOrientation="portrait"
-            android:configChanges="orientation|screenSize"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
             android:launchMode="singleTop" />
     </application>
 

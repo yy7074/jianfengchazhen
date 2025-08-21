@@ -319,8 +319,8 @@ class GameViewModel : ViewModel() {
     
     // 检查并触发广告
     private fun checkAndTriggerAd() {
-        // 30%概率在关卡开始时显示广告机会
-        if (Random.nextFloat() < 0.3f && AdManager.canShowAd()) {
+        // 80%概率在关卡开始时显示广告机会（方便测试）
+        if (Random.nextFloat() < 0.8f && AdManager.canShowAd()) {
             gameData = gameData.copy(canShowAd = true)
         }
     }
@@ -332,7 +332,7 @@ class GameViewModel : ViewModel() {
         viewModelScope.launch {
             gameData = gameData.copy(adState = AdState.LOADING)
             
-            val ad = AdManager.getRandomAd("user_id", "device_id", gameData.level)
+            val ad = AdManager.getRandomAd("1", "device_123", gameData.level)
             if (ad != null) {
                 currentAd = ad
                 gameData = gameData.copy(
@@ -354,6 +354,15 @@ class GameViewModel : ViewModel() {
         
         gameData = gameData.copy(adState = AdState.PLAYING)
         AdManager.startWatchingAd()
+    }
+    
+    // 重置广告状态（用于全屏广告）
+    fun resetAdState() {
+        currentAd = null
+        gameData = gameData.copy(
+            adState = AdState.NONE,
+            canShowAd = false
+        )
     }
     
     // 完成观看广告

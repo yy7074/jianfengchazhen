@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import get_db
 from schemas import *
+from models import GameRecord, AdWatchRecord, CoinTransaction, WithdrawRequest as WithdrawRequestModel
 from services.user_service import UserService
 from services.ad_service import AdService
 from typing import List
@@ -10,8 +12,24 @@ router = APIRouter()
 
 @router.post("/register", response_model=BaseResponse)
 async def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
-    """用户注册"""
+    """用户注册（如果用户已存在则直接返回用户信息）"""
     try:
+        # 检查用户是否已存在
+        existing_user = UserService.get_user_by_device_id(db, user_data.device_id)
+        if existing_user:
+            # 用户已存在，更新最后登录时间并返回用户信息
+            UserService.update_last_login(db, existing_user.id)
+            return BaseResponse(
+                message="用户已存在，自动登录",
+                data={
+                    "user_id": existing_user.id,
+                    "device_id": existing_user.device_id,
+                    "nickname": existing_user.nickname,
+                    "coins": float(existing_user.coins)
+                }
+            )
+        
+        # 创建新用户
         user = UserService.create_user(db, user_data)
         return BaseResponse(
             message="注册成功",
@@ -158,11 +176,11 @@ async def get_withdraw_history(
         raise HTTPException(status_code=404, detail="用户不存在")
     
     skip = (page - 1) * size
-    withdraws = db.query(WithdrawRequest).filter(
-        WithdrawRequest.user_id == user_id
-    ).order_by(WithdrawRequest.request_time.desc()).offset(skip).limit(size).all()
+    withdraws = db.query(WithdrawRequestModel).filter(
+        WithdrawRequestModel.user_id == user_id
+    ).order_by(WithdrawRequestModel.request_time.desc()).offset(skip).limit(size).all()
     
-    total = db.query(WithdrawRequest).filter(WithdrawRequest.user_id == user_id).count()
+    total = db.query(WithdrawRequestModel).filter(WithdrawRequestModel.user_id == user_id).count()
     
     return BaseResponse(
         message="获取成功",
@@ -173,4 +191,93 @@ async def get_withdraw_history(
             "size": size,
             "pages": (total + size - 1) // size
         }
-    ) 
+    )
+
+@router.get("/{user_id}/stats", response_model=BaseResponse)
+async def get_user_stats(user_id: int, db: Session = Depends(get_db)):
+    """获取用户统计信息"""
+    try:
+        # 验证用户是否存在
+        user = UserService.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        
+        # 获取游戏统计
+        game_count = db.query(GameRecord).filter(GameRecord.user_id == user_id).count()
+        best_score_result = db.query(func.max(GameRecord.score)).filter(GameRecord.user_id == user_id).scalar()
+        avg_score_result = db.query(func.avg(GameRecord.score)).filter(GameRecord.user_id == user_id).scalar()
+        
+        # 获取广告统计
+        ads_watched = db.query(AdWatchRecord).filter(AdWatchRecord.user_id == user_id).count()
+        total_ad_coins_result = db.query(func.sum(AdWatchRecord.reward_coins)).filter(AdWatchRecord.user_id == user_id).scalar()
+        
+        # 获取金币统计
+        total_coins_earned = db.query(func.sum(CoinTransaction.amount)).filter(
+            CoinTransaction.user_id == user_id,
+            CoinTransaction.amount > 0
+        ).scalar()
+        
+        stats = {
+            "game_count": game_count or 0,
+            "best_score": int(best_score_result or 0),
+            "average_score": int(avg_score_result or 0),
+            "ads_watched": ads_watched or 0,
+            "total_coins": float(total_coins_earned or 0),
+            "current_coins": float(user.coins or 0),
+            "level": user.level or 1,
+            "total_score": int(best_score_result or 0)  # 与best_score相同，保持兼容性
+        }
+        
+        return BaseResponse(message="获取成功", data=stats)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="获取用户统计失败")
+
+@router.get("/{user_id}/withdraws", response_model=BaseResponse)
+async def get_user_withdraw_history(
+    user_id: int, 
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """获取用户提现历史（移动端使用）"""
+    try:
+        # 验证用户是否存在
+        user = UserService.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        
+        # 获取提现记录
+        skip = (page - 1) * size
+        withdraws = db.query(WithdrawRequestModel).filter(
+            WithdrawRequestModel.user_id == user_id
+        ).order_by(WithdrawRequestModel.request_time.desc()).offset(skip).limit(size).all()
+        
+        # 手动构建提现记录数据
+        withdraw_data = []
+        for withdraw in withdraws:
+            record = {
+                "id": withdraw.id,
+                "amount": float(withdraw.amount),
+                "status": withdraw.status.value if hasattr(withdraw.status, 'value') else str(withdraw.status),
+                "request_time": withdraw.request_time.isoformat() if withdraw.request_time else None,
+                "process_time": withdraw.process_time.isoformat() if withdraw.process_time else None,
+                "alipay_account": withdraw.alipay_account,
+                "real_name": withdraw.real_name,
+                "admin_note": withdraw.admin_note
+            }
+            withdraw_data.append(record)
+        
+        total = db.query(WithdrawRequestModel).filter(WithdrawRequestModel.user_id == user_id).count()
+        
+        return BaseResponse(
+            message="获取成功",
+            data=withdraw_data  # 直接返回列表，而不是嵌套对象
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="获取提现历史失败") 

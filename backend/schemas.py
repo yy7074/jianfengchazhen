@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Union, Any
 from datetime import datetime
 from decimal import Decimal
 
@@ -7,11 +7,12 @@ from decimal import Decimal
 class BaseResponse(BaseModel):
     code: int = 200
     message: str = "success"
-    data: Optional[dict] = None
+    data: Optional[Union[dict, list, Any]] = None
 
 # 用户相关模型
 class UserRegister(BaseModel):
     device_id: str = Field(..., min_length=1, max_length=64)
+    device_name: Optional[str] = Field(None, max_length=100, description="设备名称（手机型号等）")
     nickname: Optional[str] = Field(None, max_length=50)
 
 class UserLogin(BaseModel):
@@ -20,6 +21,7 @@ class UserLogin(BaseModel):
 class UserInfo(BaseModel):
     id: int
     device_id: str
+    device_name: Optional[str]
     username: Optional[str]
     nickname: Optional[str]
     avatar: Optional[str]
@@ -42,7 +44,10 @@ class UserUpdate(BaseModel):
 # 广告相关模型
 class AdConfigCreate(BaseModel):
     name: str = Field(..., max_length=100)
-    video_url: str = Field(..., max_length=500)
+    ad_type: str = Field(default="video", pattern="^(video|webpage)$")
+    video_url: Optional[str] = Field(None, max_length=500)
+    webpage_url: Optional[str] = Field(None, max_length=500) 
+    image_url: Optional[str] = Field(None, max_length=500)
     duration: int = Field(..., gt=0)
     reward_coins: Decimal = Field(default=0, ge=0)
     daily_limit: int = Field(default=10, ge=1)
@@ -53,7 +58,10 @@ class AdConfigCreate(BaseModel):
 
 class AdConfigUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
+    ad_type: Optional[str] = Field(None, pattern="^(video|webpage)$")
     video_url: Optional[str] = Field(None, max_length=500)
+    webpage_url: Optional[str] = Field(None, max_length=500)
+    image_url: Optional[str] = Field(None, max_length=500)
     duration: Optional[int] = Field(None, gt=0)
     reward_coins: Optional[Decimal] = Field(None, ge=0)
     daily_limit: Optional[int] = Field(None, ge=1)
@@ -66,7 +74,10 @@ class AdConfigUpdate(BaseModel):
 class AdConfigInfo(BaseModel):
     id: int
     name: str
-    video_url: str
+    ad_type: str
+    video_url: Optional[str] = None
+    webpage_url: Optional[str] = None
+    image_url: Optional[str] = None
     duration: int
     reward_coins: Decimal
     daily_limit: int

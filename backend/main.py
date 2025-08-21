@@ -8,6 +8,7 @@ import uvicorn
 from config import settings
 from database import get_db, Base, engine
 from services.config_service import ConfigService
+from services.ad_service import AdService
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -40,7 +41,7 @@ from routers import user_router, ad_router, game_router, admin_router
 app.include_router(user_router.router, prefix="/api/user", tags=["用户"])
 app.include_router(ad_router.router, prefix="/api/ad", tags=["广告"])
 app.include_router(game_router.router, prefix="/api/game", tags=["游戏"])
-app.include_router(admin_router.router, prefix="/api/admin", tags=["管理"])
+app.include_router(admin_router.router, prefix="/admin", tags=["管理"])
 
 @app.on_event("startup")
 async def startup_event():
@@ -56,8 +57,12 @@ async def startup_event():
     try:
         ConfigService.init_default_configs(db)
         print("✅ 默认配置初始化完成")
+        
+        # 初始化默认广告
+        AdService.init_default_ads(db)
+        print("✅ 默认广告初始化完成")
     except Exception as e:
-        print(f"❌ 配置初始化失败: {e}")
+        print(f"❌ 初始化失败: {e}")
     finally:
         db.close()
 
@@ -76,15 +81,16 @@ async def root():
             h1 { color: #333; }
             .api-link { display: inline-block; margin: 10px; padding: 10px 20px; 
                        background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+            .status { background: #28a745; color: white; padding: 5px 10px; border-radius: 3px; }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🎯 见缝插针游戏后端服务</h1>
-            <p>后端服务正在运行中...</p>
+            <p><span class="status">✅ 服务运行中</span> 后端服务正在运行中...</p>
             <div>
                 <a href="/docs" class="api-link">📖 API文档</a>
-                <a href="/admin" class="api-link">🔧 管理后台</a>
+                <a href="/admin/" class="api-link">🔧 管理后台</a>
             </div>
             <h3>🚀 主要功能</h3>
             <ul>
@@ -95,10 +101,22 @@ async def root():
                 <li>游戏数据统计</li>
                 <li>管理后台</li>
             </ul>
+            <h3>🌐 访问地址</h3>
+            <ul>
+                <li><strong>管理后台</strong>: <a href="/admin/">/admin/</a></li>
+                <li><strong>API文档</strong>: <a href="/docs">/docs</a></li>
+            </ul>
         </div>
     </body>
     </html>
     """
+
+# 添加admin重定向
+@app.get("/admin")
+async def admin_redirect():
+    """重定向到admin首页"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/admin/", status_code=301)
 
 @app.get("/health")
 async def health_check():
@@ -109,7 +127,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=3000,
         reload=settings.DEBUG,
         log_level="info"
     ) 
