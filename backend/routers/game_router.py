@@ -84,6 +84,12 @@ async def get_leaderboard(
     db: Session = Depends(get_db)
 ):
     """获取排行榜"""
+    # 参数验证和清理
+    limit = max(1, min(limit, 100))  # 限制在1-100之间
+    valid_periods = ["all", "today", "week", "month"]
+    if period not in valid_periods:
+        period = "all"
+    
     query = db.query(
         GameRecord.user_id,
         User.nickname,
