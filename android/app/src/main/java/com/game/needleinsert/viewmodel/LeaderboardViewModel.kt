@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.game.needleinsert.network.RetrofitClient
 import com.game.needleinsert.utils.UserManager
+import com.game.needleinsert.model.LeaderboardResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,28 +34,26 @@ class LeaderboardViewModel : ViewModel() {
         val isCurrentUser: Boolean = false
     )
     
-    fun loadLeaderboard() {
+    fun loadLeaderboard(period: String = "all") {
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true, error = null)
                 
-                val response = apiService.getLeaderboard("Bearer dummy_token")
+                val response = apiService.getLeaderboard("Bearer dummy_token", period)
                 
                 if (response.isSuccessful && response.body()?.code == 200) {
-                    val responseData = response.body()?.data as? Map<String, Any>
-                    val leaderboardData = responseData?.get("leaderboard") as? List<Map<String, Any>>
-                    if (leaderboardData != null) {
+                    val leaderboardResponse = response.body()?.data
+                    if (leaderboardResponse != null) {
                         val currentUser = UserManager.getCurrentUser()
-                        val players = leaderboardData.mapIndexed { index, playerMap ->
-                            val playerId = (playerMap["id"] as? Number)?.toString() ?: "0"
+                        val players = leaderboardResponse.leaderboard.map { player ->
                             PlayerData(
-                                id = playerId,
-                                nickname = playerMap["nickname"] as? String ?: "匿名玩家",
-                                bestScore = (playerMap["best_score"] as? Number)?.toInt() ?: 0,
-                                level = (playerMap["level"] as? Number)?.toInt() ?: 1,
-                                gameCount = (playerMap["game_count"] as? Number)?.toInt() ?: 0,
-                                coins = (playerMap["coins"] as? Number)?.toInt() ?: 0,
-                                isCurrentUser = currentUser != null && playerId == currentUser.id
+                                id = player.userId.toString(),
+                                nickname = player.nickname,
+                                bestScore = player.bestScore,
+                                level = player.level,
+                                gameCount = player.gameCount,
+                                coins = player.coins,
+                                isCurrentUser = currentUser != null && player.userId.toString() == currentUser.id
                             )
                         }
                         
@@ -91,9 +90,7 @@ class LeaderboardViewModel : ViewModel() {
     
     fun changeTimeRange(timeRange: String) {
         _uiState.value = _uiState.value.copy(timeRange = timeRange)
-        // 这里可以根据时间范围重新加载数据
-        // 暂时使用相同的数据
-        loadLeaderboard()
+        loadLeaderboard(timeRange)
     }
     
     private fun generateFallbackData(): List<PlayerData> {

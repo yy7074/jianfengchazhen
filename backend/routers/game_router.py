@@ -112,12 +112,17 @@ async def get_leaderboard(
     # 组装排行榜数据
     result = []
     for rank, (user_id, nickname, best_score, latest_play) in enumerate(leaderboard, 1):
+        # 获取用户详细信息
+        user_info = db.query(User).filter(User.id == user_id).first()
         result.append({
             "rank": rank,
             "user_id": user_id,
             "nickname": nickname or f"用户{user_id}",
             "best_score": best_score,
-            "latest_play": latest_play
+            "latest_play": latest_play.isoformat() if latest_play else None,
+            "level": user_info.level if user_info else 1,
+            "game_count": user_info.game_count if user_info else 0,
+            "coins": float(user_info.coins) if user_info else 0
         })
     
     return BaseResponse(

@@ -160,4 +160,22 @@ data class BaseResponse<T>(
     @SerializedName("code") val code: Int,
     @SerializedName("message") val message: String,
     @SerializedName("data") val data: T? = null
+)
+
+// 排行榜数据模型
+data class LeaderboardResponse(
+    @SerializedName("leaderboard") val leaderboard: List<LeaderboardPlayer>,
+    @SerializedName("period") val period: String,
+    @SerializedName("total") val total: Int
+)
+
+data class LeaderboardPlayer(
+    @SerializedName("rank") val rank: Int,
+    @SerializedName("user_id") val userId: Int,
+    @SerializedName("nickname") val nickname: String,
+    @SerializedName("best_score") val bestScore: Int,
+    @SerializedName("latest_play") val latestPlay: String?,
+    @SerializedName("level") val level: Int = 1,
+    @SerializedName("game_count") val gameCount: Int = 0,
+    @SerializedName("coins") val coins: Int = 0
 ) 

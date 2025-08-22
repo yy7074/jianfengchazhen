@@ -63,5 +63,9 @@ interface ApiService {
     ): Response<BaseResponse<String>>
     
     @GET("api/game/leaderboard")
-    suspend fun getLeaderboard(@Header("Authorization") token: String): Response<BaseResponse<List<User>>>
+    suspend fun getLeaderboard(
+        @Header("Authorization") token: String,
+        @Query("period") period: String = "all",
+        @Query("limit") limit: Int = 50
+    ): Response<BaseResponse<LeaderboardResponse>>
 } 
