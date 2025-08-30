@@ -68,6 +68,12 @@ fun VideoAdPlayer(
                         Player.STATE_READY -> {
                             isVideoReady = true
                             hasError = false
+                            // 视频准备好后自动开始播放
+                            if (!isPlaying) {
+                                player.play()
+                                isPlaying = true
+                                onAdStarted()
+                            }
                         }
                         Player.STATE_ENDED -> {
                             onAdCompleted(true)
@@ -304,6 +310,7 @@ fun VideoAdPlayer(
                             onClick = {
                                 exoPlayer?.play()
                                 isPlaying = true
+                                onAdStarted()
                             },
                             modifier = Modifier
                                 .size(80.dp)

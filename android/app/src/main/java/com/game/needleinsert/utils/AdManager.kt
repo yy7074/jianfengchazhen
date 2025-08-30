@@ -277,9 +277,10 @@ object AdManager {
                             
                             Log.d("AdManager", "解析数据: rewardCoins=$rewardCoins, userCoins=$userCoins")
                             
+                            val actualRewardCoins = rewardCoins?.toInt() ?: 0
                             val serverReward = AdReward(
-                                coins = rewardCoins?.toInt() ?: ad.rewardCoins,
-                                message = "观看广告奖励 ${rewardCoins?.toInt() ?: ad.rewardCoins} 金币！"
+                                coins = actualRewardCoins,
+                                message = "观看广告奖励 ${actualRewardCoins} 金币！"
                             )
                             
                             // 更新用户金币到本地存储

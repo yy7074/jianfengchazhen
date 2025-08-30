@@ -6,6 +6,7 @@ from services.config_service import ConfigService
 from datetime import datetime, date
 from typing import Dict, Optional
 from sqlalchemy import func
+from decimal import Decimal
 
 class WithdrawService:
     
@@ -37,14 +38,14 @@ class WithdrawService:
         coins_needed = base_coins + fee_coins
         
         # 验证用户金币是否达到最小提现要求
-        if user.coins < min_coins:
+        if float(user.coins) < min_coins:
             return {
                 "success": False, 
                 "message": f"金币余额不足，最少需要{min_coins}金币才能提现，当前余额{user.coins}金币"
             }
         
         # 验证用户金币余额
-        if user.coins < coins_needed:
+        if float(user.coins) < coins_needed:
             fee_message = f"（含手续费{fee_coins:.2f}金币）" if fee_rate > 0 else ""
             return {
                 "success": False, 
@@ -72,7 +73,7 @@ class WithdrawService:
         
         # 扣除金币
         success = UserService.deduct_coins(
-            db, user_id, float(coins_needed),
+            db, user_id, coins_needed,
             TransactionType.WITHDRAW,
             f"提现申请 - {withdraw_data.amount}元"
         )
@@ -83,8 +84,8 @@ class WithdrawService:
         # 创建提现申请
         withdraw_request = WithdrawRequest(
             user_id=user_id,
-            amount=withdraw_data.amount,
-            coins_used=coins_needed,
+            amount=Decimal(str(withdraw_data.amount)),
+            coins_used=Decimal(str(coins_needed)),
             alipay_account=withdraw_data.alipay_account,
             real_name=withdraw_data.real_name,
             status=WithdrawStatus.PENDING

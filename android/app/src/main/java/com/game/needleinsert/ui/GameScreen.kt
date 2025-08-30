@@ -130,12 +130,11 @@ fun GameScreen(
             )
         }
         
-        // 广告机会提示
-        if (viewModel.gameData.canShowAd && viewModel.gameData.adState == AdState.NONE) {
-            AdOpportunityDialog(
-                onWatchClick = { viewModel.requestWatchAd() },
-                onDismissClick = { viewModel.cancelAdWatch() }
-            )
+        // 广告机会提示 - 直接触发广告请求，无需额外弹窗
+        LaunchedEffect(viewModel.gameData.canShowAd) {
+            if (viewModel.gameData.canShowAd && viewModel.gameData.adState == AdState.NONE) {
+                viewModel.requestWatchAd()
+            }
         }
         
         // 广告播放界面 - 全屏广告确认对话框
@@ -764,62 +763,7 @@ private fun getNeedleDisplayColor(number: Int): Color {
     return colors[(number - 1) % colors.size]
 }
 
-@Composable
-fun AdOpportunityDialog(
-    onWatchClick: () -> Unit,
-    onDismissClick: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismissClick,
-        title = {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "🎬",
-                    fontSize = 32.sp
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "观看广告获得奖励",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        },
-        text = {
-            Column {
-                Text(
-                    text = "观看15秒广告视频可获得金币奖励！",
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "💰 奖励：50-150金币",
-                    fontSize = 14.sp,
-                    color = Color(0xFFFFD700),
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onWatchClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4CAF50)
-                )
-            ) {
-                Text("观看广告")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissClick) {
-                Text("稍后再看")
-            }
-        }
-    )
-}
+
 
 @Composable
 fun AdPlayerDialog(

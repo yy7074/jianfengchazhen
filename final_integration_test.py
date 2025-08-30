@@ -25,7 +25,8 @@ class LeaderboardIntegrationTest:
             "test": test_name,
             "success": success,
             呢
-            "message": message
+            "message": messageda yi xie
+            "message": messageda yi xie
         })
         print(f"{status}: {test_name}")
         if message:
