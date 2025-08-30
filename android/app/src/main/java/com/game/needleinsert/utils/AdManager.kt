@@ -16,7 +16,7 @@ object AdManager {
     // 缓存的广告列表（从后端获取）
     private var cachedAds: List<AdConfig> = emptyList()
     private var adsCacheTime: Long = 0
-    private val cacheExpireTime = 30 * 1000L // 30秒缓存过期，方便测试
+    private val cacheExpireTime = 5 * 1000L // 5秒缓存过期，快速更新
     
     // 模拟广告数据（作为后备数据）
     private val fallbackAds = listOf(
@@ -83,6 +83,15 @@ object AdManager {
     }
     
     /**
+     * 强制刷新广告缓存
+     */
+    fun clearAdCache() {
+        cachedAds = emptyList()
+        adsCacheTime = 0
+        Log.d("AdManager", "广告缓存已清除")
+    }
+    
+    /**
      * 从后端获取广告列表
      */
     suspend fun loadAdsFromBackend(userId: String, deviceId: String, userLevel: Int): List<AdConfig> {
@@ -94,8 +103,9 @@ object AdManager {
                 return cachedAds
             }
             
-            // 实际调用后端API
-            val response = RetrofitClient.getApiService().getAvailableAds("Bearer dummy_token", "1") // 使用固定用户ID
+            // 实际调用后端API - 使用真实的用户ID
+            val actualUserId = if (userId != "default") userId else "1"
+            val response = RetrofitClient.getApiService().getAvailableAds("Bearer dummy_token", actualUserId)
             
             if (response.isSuccessful) {
                 val responseData = RetrofitClient.getResponseData(response)
@@ -107,7 +117,7 @@ object AdManager {
                         val ads = adsData.mapNotNull { adData ->
                             try {
                                 AdConfig(
-                                    id = adData["id"].toString(),
+                                    id = (adData["id"] as? Number)?.toInt()?.toString() ?: adData["id"].toString(),
                                     title = adData["name"] as? String ?: "",
                                     description = adData["description"] as? String ?: "",
                                     adType = adData["ad_type"] as? String ?: "video",
@@ -244,21 +254,49 @@ object AdManager {
                 val request = AdWatchRequest(
                     userId = userId,
                     adId = ad.id,
-                    watchDuration = watchDuration,
+                    watchDuration = (watchDuration / 1000).toLong(), // 转换毫秒为秒
                     isCompleted = isCompleted,
                     skipTime = skipTime,
                     deviceInfo = "Android"
                 )
                 
                 val finalReward = try {
+                    Log.d("AdManager", "发送广告观看请求: $request")
                     val response = RetrofitClient.getApiService().submitAdWatch(userId, request)
+                    Log.d("AdManager", "收到响应: 状态码=${response.code()}, 成功=${response.isSuccessful}")
+                    Log.d("AdManager", "响应体: ${response.body()}")
+                    
                     if (response.isSuccessful && response.body()?.code == 200) {
-                        val serverReward = response.body()?.data
-                        Log.d("AdManager", "服务器确认奖励: ${serverReward?.coins} 金币")
-                        // 使用服务器返回的奖励数据
-                        serverReward ?: reward
+                        val responseBody = response.body()
+                        Log.d("AdManager", "原始响应数据: ${responseBody}")
+                        
+                        val dataMap = responseBody?.data
+                        if (dataMap != null) {
+                            val rewardCoins = dataMap["reward_coins"] as? Number
+                            val userCoins = dataMap["user_coins"] as? Number
+                            
+                            Log.d("AdManager", "解析数据: rewardCoins=$rewardCoins, userCoins=$userCoins")
+                            
+                            val serverReward = AdReward(
+                                coins = rewardCoins?.toInt() ?: ad.rewardCoins,
+                                message = "观看广告奖励 ${rewardCoins?.toInt() ?: ad.rewardCoins} 金币！"
+                            )
+                            
+                            // 更新用户金币到本地存储
+                            userCoins?.let { coins ->
+                                UserManager.updateCoins(coins.toInt())
+                                Log.d("AdManager", "更新用户金币: ${coins.toInt()}")
+                            }
+                            
+                            Log.d("AdManager", "服务器确认奖励: ${serverReward.coins} 金币")
+                            serverReward
+                        } else {
+                            reward
+                        }
                     } else {
-                        Log.w("AdManager", "服务器验证失败，使用本地奖励: ${response.body()?.message}")
+                        Log.w("AdManager", "服务器验证失败，状态码: ${response.code()}")
+                        Log.w("AdManager", "错误响应: ${response.errorBody()?.string()}")
+                        Log.w("AdManager", "响应消息: ${response.body()?.message}")
                         reward
                     }
                 } catch (e: Exception) {

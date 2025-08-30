@@ -2,8 +2,11 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import uvicorn
+import logging
 
 from config import settings
 from database import get_db, Base, engine
@@ -30,6 +33,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 全局异常处理器
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """处理请求验证错误"""
+    error_details = []
+    for error in exc.errors():
+        error_details.append({
+            "field": " -> ".join(str(x) for x in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"]
+        })
+    
+    logging.error(f"请求验证失败: {request.url} - {error_details}")
+    
+    return JSONResponse(
+        status_code=400,
+        content={
+            "code": 400,
+            "message": "请求参数验证失败",
+            "data": {
+                "errors": error_details,
+                "request_body": str(exc.body) if hasattr(exc, 'body') else None
+            }
+        }
+    )
 
 # 静态文件服务（用于广告视频等）
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

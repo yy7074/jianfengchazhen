@@ -24,7 +24,7 @@ class WithdrawViewModel : ViewModel() {
         val isSubmitting: Boolean = false,
         val currentCoins: Int = 0,
         val withdrawableAmount: Double = 0.0,
-        val withdrawAmount: String = "",
+        val selectedAmount: Double? = null,
         val alipayAccount: String = "",
         val realName: String = "",
         val withdrawHistory: List<WithdrawRecord> = emptyList(),
@@ -32,14 +32,10 @@ class WithdrawViewModel : ViewModel() {
         val error: String? = null
     ) {
         val canSubmit: Boolean
-            get() {
-                val amount = withdrawAmount.toDoubleOrNull() ?: 0.0
-                return amount >= 10.0 && 
-                       amount <= 500.0 && 
-                       amount <= withdrawableAmount &&
-                       alipayAccount.isNotBlank() && 
-                       realName.isNotBlank()
-            }
+            get() = selectedAmount != null &&
+                    selectedAmount!! <= withdrawableAmount &&
+                    alipayAccount.isNotBlank() && 
+                    realName.isNotBlank()
     }
     
     data class WithdrawRecord(
@@ -55,7 +51,7 @@ class WithdrawViewModel : ViewModel() {
             try {
                 val currentUser = UserManager.getCurrentUser()
                 if (currentUser != null) {
-                    val withdrawableAmount = currentUser.coins / 100.0 // 100金币 = 1元
+                    val withdrawableAmount = currentUser.coins / 33000.0 // 33000金币 = 1元
                     _uiState.value = _uiState.value.copy(
                         currentCoins = currentUser.coins,
                         withdrawableAmount = withdrawableAmount
@@ -117,21 +113,8 @@ class WithdrawViewModel : ViewModel() {
         }
     }
     
-    fun updateWithdrawAmount(amount: String) {
-        // 只允许输入数字和小数点
-        val filteredAmount = amount.filter { it.isDigit() || it == '.' }
-        
-        // 限制小数点后两位
-        val parts = filteredAmount.split(".")
-        val formattedAmount = if (parts.size > 2) {
-            parts[0] + "." + parts[1]
-        } else if (parts.size == 2 && parts[1].length > 2) {
-            parts[0] + "." + parts[1].take(2)
-        } else {
-            filteredAmount
-        }
-        
-        _uiState.value = _uiState.value.copy(withdrawAmount = formattedAmount)
+    fun selectWithdrawAmount(amount: Double) {
+        _uiState.value = _uiState.value.copy(selectedAmount = amount)
     }
     
     fun updateAlipayAccount(account: String) {
@@ -156,11 +139,21 @@ class WithdrawViewModel : ViewModel() {
                     return@launch
                 }
                 
-                val amount = _uiState.value.withdrawAmount.toDoubleOrNull()
-                if (amount == null || amount < 10.0 || amount > 500.0) {
+                val amount = _uiState.value.selectedAmount
+                if (amount == null) {
                     _uiState.value = _uiState.value.copy(
                         isSubmitting = false,
-                        error = "提现金额必须在¥10.00-¥500.00之间"
+                        error = "请选择提现金额"
+                    )
+                    return@launch
+                }
+                
+                // 验证金额是否为有效选项
+                val validAmounts = listOf(0.5, 15.0, 30.0)
+                if (amount !in validAmounts) {
+                    _uiState.value = _uiState.value.copy(
+                        isSubmitting = false,
+                        error = "无效的提现金额"
                     )
                     return@launch
                 }
@@ -194,7 +187,7 @@ class WithdrawViewModel : ViewModel() {
                 _uiState.value = _uiState.value.copy(
                     isSubmitting = false,
                     message = "提现申请提交成功，请等待审核",
-                    withdrawAmount = "",
+                    selectedAmount = null,
                     alipayAccount = "",
                     realName = ""
                 )

@@ -50,11 +50,14 @@ async def watch_ad(
     result = AdService.watch_ad(db, user_id, watch_request, client_ip)
     
     if result["success"]:
+        # 获取用户最新金币余额
+        updated_user = UserService.get_user_by_id(db, user_id)
         return BaseResponse(
             message=result["message"],
             data={
                 "reward_coins": float(result["reward_coins"]),
-                "is_completed": result["is_completed"]
+                "is_completed": result["is_completed"],
+                "user_coins": float(updated_user.coins) if updated_user else 0
             }
         )
     else:
@@ -142,9 +145,21 @@ async def get_available_ads(user_id: int, db: Session = Depends(get_db)):
         or_(AdConfig.end_time.is_(None), AdConfig.end_time >= now)
     ).all()
     
-    # 简化的广告数据转换
+    # 计算用户今日观看次数的广告数据转换
     available_ads = []
+    today = date.today()
+    
     for ad in all_ads:
+        # 查询用户今日对该广告的观看次数
+        watched_today = db.query(func.count(AdWatchRecord.id)).filter(
+            AdWatchRecord.user_id == user_id,
+            AdWatchRecord.ad_id == ad.id,
+            func.date(AdWatchRecord.watch_time) == today
+        ).scalar() or 0
+        
+        # 计算剩余观看次数
+        remaining_today = max(0, (ad.daily_limit or 10) - watched_today)
+        
         ad_data = {
             "id": ad.id,
             "name": ad.name,
@@ -157,10 +172,13 @@ async def get_available_ads(user_id: int, db: Session = Depends(get_db)):
             "daily_limit": ad.daily_limit or 10,
             "min_watch_duration": ad.min_watch_duration or 15,
             "weight": ad.weight or 1,
-            "remaining_today": ad.daily_limit or 10,  # 简化处理
-            "watched_today": 0  # 简化处理
+            "remaining_today": remaining_today,
+            "watched_today": watched_today
         }
-        available_ads.append(ad_data)
+        
+        # 只返回还有剩余观看次数的广告
+        if remaining_today > 0:
+            available_ads.append(ad_data)
     
     return BaseResponse(
         message="获取成功",

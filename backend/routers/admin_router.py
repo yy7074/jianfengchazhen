@@ -196,6 +196,39 @@ async def get_users_list(
         }
     )
 
+# 用户编辑
+@router.put("/api/users/{user_id}")
+async def update_user(
+    user_id: int, 
+    user_data: dict,
+    db: Session = Depends(get_db)
+):
+    """更新用户信息"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    # 更新允许编辑的字段
+    if "nickname" in user_data:
+        user.nickname = user_data["nickname"]
+    if "coins" in user_data:
+        user.coins = float(user_data["coins"])
+    if "level" in user_data:
+        user.level = int(user_data["level"])
+    if "experience" in user_data:
+        user.experience = int(user_data["experience"])
+    
+    try:
+        db.commit()
+        db.refresh(user)
+        return BaseResponse(message="用户信息更新成功")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="更新失败")
+
 # 广告管理
 @router.get("/api/ads")
 async def get_ads_list(db: Session = Depends(get_db)):

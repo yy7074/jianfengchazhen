@@ -24,6 +24,7 @@ class SettingsViewModel : ViewModel() {
         val isLoading: Boolean = false,
         val userInfo: User? = null,
         val gameStats: GameStats? = null,
+        val coinRecords: List<CoinRecord> = emptyList(),
         val withdrawHistory: List<WithdrawRecord> = emptyList(),
         val error: String? = null
     )
@@ -34,6 +35,14 @@ class SettingsViewModel : ViewModel() {
         val averageScore: Int = 0,
         val adsWatched: Int = 0,
         val totalCoins: Int = 0
+    )
+    
+    data class CoinRecord(
+        val id: Int,
+        val amount: Int,
+        val type: String,
+        val description: String,
+        val createdAt: String
     )
     
     data class WithdrawRecord(
@@ -213,6 +222,39 @@ class SettingsViewModel : ViewModel() {
         }
     }
     
+    fun loadCoinRecords() {
+        viewModelScope.launch {
+            try {
+                val currentUser = UserManager.getCurrentUser()
+                if (currentUser != null) {
+                    val response = apiService.getCoinRecords(currentUser.id)
+                    if (response.isSuccessful && response.body()?.code == 200) {
+                        val recordsData = response.body()?.data as? List<Map<String, Any>>
+                        val coinRecords = recordsData?.mapNotNull { record ->
+                            try {
+                                CoinRecord(
+                                    id = (record["id"] as? Number)?.toInt() ?: 0,
+                                    amount = (record["amount"] as? Number)?.toInt() ?: 0,
+                                    type = record["type"] as? String ?: "",
+                                    description = record["description"] as? String ?: "",
+                                    createdAt = formatDateTime(record["created_at"] as? String)
+                                )
+                            } catch (e: Exception) {
+                                Log.e("SettingsViewModel", "解析金币记录失败", e)
+                                null
+                            }
+                        } ?: emptyList()
+                        
+                        _uiState.value = _uiState.value.copy(coinRecords = coinRecords)
+                        Log.d("SettingsViewModel", "加载了 ${coinRecords.size} 条金币记录")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsViewModel", "加载金币记录失败", e)
+            }
+        }
+    }
+    
     fun logout() {
         viewModelScope.launch {
             try {
@@ -223,5 +265,11 @@ class SettingsViewModel : ViewModel() {
                 Log.e("SettingsViewModel", "退出登录失败", e)
             }
         }
+    }
+    
+    init {
+        loadUserInfo()
+        loadCoinRecords()
+        loadWithdrawHistory()
     }
 }

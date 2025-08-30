@@ -19,6 +19,9 @@ interface ApiService {
     @GET("api/user/{user_id}/stats")
     suspend fun getUserStats(@Path("user_id") userId: String): Response<BaseResponse<Map<String, Any>>>
     
+    @GET("api/user/{user_id}/coin-records")
+    suspend fun getCoinRecords(@Path("user_id") userId: String): Response<BaseResponse<List<Map<String, Any>>>>
+    
     @GET("api/user/{user_id}/withdraws")
     suspend fun getWithdrawHistory(@Path("user_id") userId: String): Response<BaseResponse<List<Map<String, Any>>>>
     
@@ -42,7 +45,7 @@ interface ApiService {
     suspend fun submitAdWatch(
         @Path("user_id") userId: String,
         @Body request: AdWatchRequest
-    ): Response<BaseResponse<AdReward>>
+    ): Response<BaseResponse<Map<String, Any>>>
     
     @GET("api/ad/stats")
     suspend fun getAdStats(@Header("Authorization") token: String): Response<BaseResponse<Map<String, Any>>>

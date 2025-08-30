@@ -87,15 +87,16 @@ fun WithdrawScreen(
             // 提现申请卡片
             item {
                 WithdrawRequestCard(
-                    amount = uiState.withdrawAmount,
-                    onAmountChange = { viewModel.updateWithdrawAmount(it) },
+                    selectedAmount = uiState.selectedAmount,
+                    onAmountSelect = { viewModel.selectWithdrawAmount(it) },
                     alipayAccount = uiState.alipayAccount,
                     onAlipayAccountChange = { viewModel.updateAlipayAccount(it) },
                     realName = uiState.realName,
                     onRealNameChange = { viewModel.updateRealName(it) },
                     onSubmit = { viewModel.submitWithdrawRequest() },
                     isLoading = uiState.isSubmitting,
-                    canSubmit = uiState.canSubmit
+                    canSubmit = uiState.canSubmit,
+                    withdrawableAmount = uiState.withdrawableAmount
                 )
             }
             
@@ -193,7 +194,7 @@ fun BalanceCard(
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                "兑换比例：100金币 = ¥1.00",
+                "兑换比例：33000金币 ≈ ¥1.00",
                 fontSize = 12.sp,
                 color = Color.Gray
             )
@@ -203,15 +204,16 @@ fun BalanceCard(
 
 @Composable
 fun WithdrawRequestCard(
-    amount: String,
-    onAmountChange: (String) -> Unit,
+    selectedAmount: Double?,
+    onAmountSelect: (Double) -> Unit,
     alipayAccount: String,
     onAlipayAccountChange: (String) -> Unit,
     realName: String,
     onRealNameChange: (String) -> Unit,
     onSubmit: () -> Unit,
     isLoading: Boolean,
-    canSubmit: Boolean
+    canSubmit: Boolean,
+    withdrawableAmount: Double
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -242,21 +244,46 @@ fun WithdrawRequestCard(
                 )
             }
             
-            // 提现金额
-            OutlinedTextField(
-                value = amount,
-                onValueChange = onAmountChange,
-                label = { Text("提现金额 (¥)") },
-                placeholder = { Text("请输入提现金额") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                leadingIcon = {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+            // 提现金额选择
+            Text(
+                "选择提现金额",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Gray,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
             
-            Spacer(modifier = Modifier.height(12.dp))
+            val withdrawOptions = listOf(0.5, 15.0, 30.0)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                withdrawOptions.forEach { amount ->
+                    val isSelected = selectedAmount == amount
+                    val isEnabled = amount <= withdrawableAmount
+                    
+                    OutlinedButton(
+                        onClick = { onAmountSelect(amount) },
+                        enabled = isEnabled,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isSelected) Color(0xFF2a5298) else Color.Transparent,
+                            contentColor = if (isSelected) Color.White else Color(0xFF2a5298),
+                            disabledContentColor = Color.Gray
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp, 
+                            if (isSelected) Color(0xFF2a5298) 
+                            else if (isEnabled) Color(0xFF2a5298) 
+                            else Color.Gray
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("¥$amount")
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
             
             // 支付宝账号
             OutlinedTextField(
@@ -346,12 +373,9 @@ fun WithdrawRulesCard() {
             }
             
             val rules = listOf(
-                "最低提现金额：¥10.00",
-                "最高提现金额：¥500.00",
-                "每日最多申请3次提现",
-                "工作日1-3个工作日到账",
-                "节假日可能延迟到账",
-                "请确保支付宝账号与姓名一致"
+                "提现金额：¥0.5、¥15、¥30三个固定选项",
+                "每天只能提现一次",
+                "工作日1-3个工作日到账"
             )
             
             rules.forEach { rule ->

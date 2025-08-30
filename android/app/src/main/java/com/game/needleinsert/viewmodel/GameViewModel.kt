@@ -1,11 +1,13 @@
 package com.game.needleinsert.viewmodel
 
+import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.game.needleinsert.model.*
 import com.game.needleinsert.utils.AdManager
 import com.game.needleinsert.utils.SoundManager
+import com.game.needleinsert.utils.UserManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.*
@@ -58,24 +60,69 @@ class GameViewModel : ViewModel() {
     fun initGame(screenWidth: Float, screenHeight: Float) {
         centerX = screenWidth / 2
         centerY = screenHeight / 2
-        startNewGame()
+        
+        // 从UserManager获取最新的用户金币
+        val currentUser = UserManager.getCurrentUser()
+        val userCoins = currentUser?.coins ?: 0
+        
+        // 更新gameData中的金币数量
+        gameData = gameData.copy(coins = userCoins)
+        
+        Log.d("GameViewModel", "游戏初始化，用户金币: $userCoins")
+        
+        // 如果是第一次初始化或者从第1关开始，才调用startNewGame
+        if (gameData.level <= 1) {
+            startNewGame()
+        } else {
+            // 否则只是恢复当前关卡的游戏
+            resumeCurrentLevel()
+        }
     }
     
     // 开始新游戏
     fun startNewGame() {
         val level = getCurrentLevel()
         val needleQueue = (1..level.needleCount).toList()
+        val currentLevel = gameData.level
+        val currentCoins = gameData.coins
+        
         gameData = GameData(
-            level = level.level,
+            level = currentLevel,
             needlesRequired = level.needleCount,
             rotationSpeed = level.rotationSpeed,
             state = GameState.PLAYING,
             currentLevelType = level.levelType,
             needleQueue = needleQueue,
             isReversed = level.levelType == LevelType.REVERSE,
-            coins = gameData.coins, // 保持金币数量
+            coins = currentCoins, // 保持金币数量
             canShowAd = AdManager.canShowAd(),
             adState = AdState.NONE
+        )
+        insertedNeedles = emptyList()
+        prepareNextNeedle()
+        startDiskRotation()
+        
+        // 随机触发广告机会（关卡开始时）
+        checkAndTriggerAd()
+    }
+    
+    // 恢复当前关卡（用于从广告返回后恢复游戏状态）
+    private fun resumeCurrentLevel() {
+        val level = getCurrentLevel()
+        val needleQueue = (1..level.needleCount).toList()
+        
+        // 恢复当前关卡状态，保持关卡和金币不变
+        gameData = gameData.copy(
+            needlesRequired = level.needleCount,
+            needlesInserted = 0,
+            rotationSpeed = level.rotationSpeed,
+            state = GameState.PLAYING,
+            currentLevelType = level.levelType,
+            needleQueue = needleQueue,
+            isReversed = level.levelType == LevelType.REVERSE,
+            canShowAd = AdManager.canShowAd(),
+            adState = AdState.NONE,
+            score = gameData.score // 保持分数
         )
         insertedNeedles = emptyList()
         prepareNextNeedle()
@@ -298,7 +345,12 @@ class GameViewModel : ViewModel() {
     
     // 重新开始游戏
     fun restartGame() {
-        gameData = GameData()
+        val currentLevel = gameData.level // 保存当前关卡
+        val currentCoins = gameData.coins // 保存当前金币
+        gameData = GameData(
+            level = currentLevel,
+            coins = currentCoins
+        )
         insertedNeedles = emptyList()
         diskRotation = 0f
         isNeedleLaunching = false
@@ -332,14 +384,25 @@ class GameViewModel : ViewModel() {
         viewModelScope.launch {
             gameData = gameData.copy(adState = AdState.LOADING)
             
-            val ad = AdManager.getRandomAd("1", "device_123", gameData.level)
+            // 清除广告缓存，确保获取最新的可用广告
+            AdManager.clearAdCache()
+            
+            val currentUser = UserManager.getCurrentUser()
+            val userId = currentUser?.id?.toString() ?: "1"
+            val deviceId = currentUser?.deviceId ?: "device_123"
+            
+            Log.d("GameViewModel", "请求广告，用户ID: $userId")
+            
+            val ad = AdManager.getRandomAd(userId, deviceId, gameData.level)
             if (ad != null) {
+                Log.d("GameViewModel", "获取到广告: ID=${ad.id}, 标题=${ad.title}")
                 currentAd = ad
                 gameData = gameData.copy(
                     adState = AdState.READY,
                     canShowAd = false
                 )
             } else {
+                Log.w("GameViewModel", "没有获取到可用广告")
                 gameData = gameData.copy(
                     adState = AdState.FAILED,
                     canShowAd = false
@@ -358,11 +421,39 @@ class GameViewModel : ViewModel() {
     
     // 重置广告状态（用于全屏广告）
     fun resetAdState() {
-        currentAd = null
+        // 刷新用户金币（从本地存储获取最新值）
+        val currentUser = UserManager.getCurrentUser()
+        val oldCoins = gameData.coins
+        val latestCoins = currentUser?.coins ?: gameData.coins
+        
+        Log.d("GameViewModel", "重置广告状态，刷新金币: $oldCoins -> $latestCoins")
+        
+        // 更新金币并检查是否有增加
+        val coinDiff = latestCoins - oldCoins
         gameData = gameData.copy(
+            coins = latestCoins,
             adState = AdState.NONE,
             canShowAd = false
         )
+        
+        // 如果金币增加了，显示奖励提示
+        if (coinDiff > 0) {
+            adReward = AdReward(
+                coins = coinDiff,
+                message = "观看广告获得 $coinDiff 金币！"
+            )
+            
+            Log.d("GameViewModel", "显示奖励提示: +$coinDiff 金币")
+            
+            // 3秒后隐藏奖励提示
+            viewModelScope.launch {
+                delay(3000)
+                adReward = null
+                Log.d("GameViewModel", "隐藏奖励提示")
+            }
+        }
+        
+        currentAd = null
     }
     
     // 完成观看广告
@@ -370,20 +461,46 @@ class GameViewModel : ViewModel() {
         if (gameData.adState != AdState.PLAYING) return
         
         viewModelScope.launch {
-            val reward = AdManager.completeAdWatch("user_device_id") // TODO: 使用真实用户ID
+            val currentUser = UserManager.getCurrentUser()
+            val userId = currentUser?.id?.toString() ?: "1"
+            
+            Log.d("GameViewModel", "开始观看广告完成处理，用户ID: $userId")
+            Log.d("GameViewModel", "观看前金币: ${gameData.coins}")
+            
+            val reward = AdManager.completeAdWatch(userId)
             if (reward != null) {
-                // 发放奖励
+                // 获取最新的用户金币数量
+                val updatedUser = UserManager.getCurrentUser()
+                val oldCoins = gameData.coins
+                val newCoins = updatedUser?.coins ?: (gameData.coins + reward.coins)
+                val actualReward = newCoins - oldCoins
+                
+                Log.d("GameViewModel", "AdManager返回奖励: ${reward.coins}")
+                Log.d("GameViewModel", "UserManager中的金币: ${updatedUser?.coins}")
+                Log.d("GameViewModel", "观看前金币: $oldCoins, 观看后金币: $newCoins")
+                Log.d("GameViewModel", "实际获得奖励: $actualReward")
+                
+                // 使用实际奖励数量更新显示
+                val finalReward = AdReward(
+                    coins = actualReward,
+                    message = "观看广告奖励 $actualReward 金币！"
+                )
+                
+                // 发放奖励并更新UI
                 gameData = gameData.copy(
-                    coins = gameData.coins + reward.coins,
+                    coins = newCoins,
                     adState = AdState.COMPLETED
                 )
-                adReward = reward
+                adReward = finalReward
+                
+                Log.d("GameViewModel", "UI更新完成，显示金币: ${gameData.coins}, 奖励提示: ${finalReward.message}")
                 
                 // 3秒后隐藏奖励提示
                 delay(3000)
                 adReward = null
                 gameData = gameData.copy(adState = AdState.NONE)
             } else {
+                Log.w("GameViewModel", "广告观看失败，没有获得奖励")
                 gameData = gameData.copy(adState = AdState.FAILED)
             }
             currentAd = null

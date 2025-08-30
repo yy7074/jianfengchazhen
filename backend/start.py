@@ -87,7 +87,7 @@ def init_database():
     
     return True
 
-def start_server(host="0.0.0.0", port=3000, reload=True):
+def start_server(host="0.0.0.0", port=3001, reload=True):
     """启动服务器"""
     print(f"\n🚀 启动服务器...")
     print(f"📍 地址: http://{host}:{port}")

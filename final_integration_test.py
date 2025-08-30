@@ -15,7 +15,7 @@ os.environ['NO_PROXY'] = 'localhost,127.0.0.1'
 
 class LeaderboardIntegrationTest:
     def __init__(self):
-        self.base_url = "http://catdog.dachaonet.com"
+        self.base_url = "http://8089.dachaonet.com"
         self.test_results = []
         
     def log_test(self, test_name, success, message=""):
@@ -24,6 +24,7 @@ class LeaderboardIntegrationTest:
         self.test_results.append({
             "test": test_name,
             "success": success,
+            呢
             "message": message
         })
         print(f"{status}: {test_name}")

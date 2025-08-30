@@ -103,6 +103,14 @@ fun SettingsScreen(
                 )
             }
             
+            // 金币获取记录卡片
+            item {
+                CoinRecordsCard(
+                    coinRecords = uiState.coinRecords,
+                    isLoading = uiState.isLoading
+                )
+            }
+            
             // 提现历史卡片
             item {
                 WithdrawHistoryCard(
@@ -203,6 +211,67 @@ fun GameStatsCard(
         } else {
             Text("暂无数据", color = Color.Gray)
         }
+    }
+}
+
+@Composable
+fun CoinRecordsCard(
+    coinRecords: List<SettingsViewModel.CoinRecord>,
+    isLoading: Boolean
+) {
+    SettingsCard(
+        title = "金币获取记录",
+        icon = Icons.Default.Star
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else if (coinRecords.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                coinRecords.take(5).forEach { record ->
+                    CoinRecordItem(record)
+                }
+                if (coinRecords.size > 5) {
+                    Text(
+                        "还有 ${coinRecords.size - 5} 条记录...",
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else {
+            Text("暂无金币获取记录", color = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun CoinRecordItem(record: SettingsViewModel.CoinRecord) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = record.description,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = record.createdAt,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+        }
+        Text(
+            text = "+${record.amount}",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (record.amount > 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+        )
     }
 }
 

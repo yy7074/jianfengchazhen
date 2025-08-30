@@ -280,4 +280,47 @@ async def get_user_withdraw_history(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="获取提现历史失败") 
+        raise HTTPException(status_code=500, detail="获取提现历史失败")
+
+@router.get("/{user_id}/coin-records", response_model=BaseResponse)
+async def get_coin_records(
+    user_id: int,
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页数量"),
+    db: Session = Depends(get_db)
+):
+    """获取用户金币获取记录"""
+    try:
+        # 检查用户是否存在
+        user = UserService.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        
+        # 获取广告观看记录
+        skip = (page - 1) * size
+        ad_records = db.query(AdWatchRecord).filter(
+            AdWatchRecord.user_id == user_id,
+            AdWatchRecord.is_completed == True
+        ).order_by(AdWatchRecord.watch_time.desc()).offset(skip).limit(size).all()
+        
+        # 构建金币记录数据
+        coin_records = []
+        for record in ad_records:
+            coin_record = {
+                "id": record.id,
+                "amount": int(record.reward_coins),
+                "type": "ad_watch",
+                "description": f"观看广告获得金币",
+                "created_at": record.watch_time.isoformat() if record.watch_time else None
+            }
+            coin_records.append(coin_record)
+        
+        return BaseResponse(
+            message="获取成功",
+            data=coin_records
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"服务器错误: {str(e)}") 

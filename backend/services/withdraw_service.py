@@ -3,8 +3,9 @@ from models import WithdrawRequest, User, TransactionType, WithdrawStatus
 from schemas import WithdrawRequest as WithdrawRequestSchema
 from services.user_service import UserService
 from services.config_service import ConfigService
-from datetime import datetime
+from datetime import datetime, date
 from typing import Dict, Optional
+from sqlalchemy import func
 
 class WithdrawService:
     
@@ -49,6 +50,16 @@ class WithdrawService:
                 "success": False, 
                 "message": f"金币余额不足，需要{coins_needed:.2f}金币{fee_message}，当前余额{user.coins}金币"
             }
+        
+        # 检查每日提现次数限制
+        today = date.today()
+        today_withdraws = db.query(func.count(WithdrawRequest.id)).filter(
+            WithdrawRequest.user_id == user_id,
+            func.date(WithdrawRequest.request_time) == today
+        ).scalar() or 0
+        
+        if today_withdraws >= 1:
+            return {"success": False, "message": "您今天已提现过，请明天再来"}
         
         # 检查是否有未处理的提现申请
         pending_request = db.query(WithdrawRequest).filter(

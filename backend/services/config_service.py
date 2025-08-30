@@ -77,9 +77,9 @@ class ConfigService:
     def init_default_configs(db: Session):
         """初始化默认配置"""
         default_configs = [
-            ("coin_to_rmb_rate", "1000", "金币兑换人民币比例（多少金币=1元）"),
-            ("min_withdraw_amount", "10", "最小提现金额（元）"),
-            ("max_withdraw_amount", "500", "最大提现金额（元）"),
+            ("coin_to_rmb_rate", "33000", "金币兑换人民币比例（多少金币=1元）"),
+            ("min_withdraw_amount", "0.5", "最小提现金额（元）"),
+            ("max_withdraw_amount", "30", "最大提现金额（元）"),
             ("daily_ad_limit", "20", "每日广告观看上限"),
             ("game_reward_coins", "5", "完成一局游戏奖励金币"),
             ("register_reward_coins", "100", "注册奖励金币"),
@@ -114,7 +114,7 @@ class ConfigService:
     @staticmethod
     def get_coin_to_rmb_rate(db: Session) -> float:
         """获取金币兑换人民币比例"""
-        return float(ConfigService.get_config(db, "coin_to_rmb_rate", "1000"))
+        return float(ConfigService.get_config(db, "coin_to_rmb_rate", "33000"))
     
     @staticmethod
     def get_min_withdraw_amount(db: Session) -> float:

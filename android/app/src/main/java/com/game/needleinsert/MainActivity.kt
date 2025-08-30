@@ -140,30 +140,6 @@ fun MainMenuScreen(
         userViewModel.loadUserInfo()
     }
     
-    // 启动广告的函数
-    val startAd = {
-        // 创建示例广告配置
-        val sampleAd = AdConfig(
-            id = "sample_ad_1",
-            title = "游戏推广广告",
-            description = "观看精彩广告视频获得金币奖励！",
-            adType = "video",
-            videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-            webpageUrl = "",
-            imageUrl = "",
-            thumbnailUrl = "",
-            rewardCoins = 50,
-            duration = 30,
-            skipTime = 15,
-            isActive = true,
-            weight = 1,
-            dailyLimit = 10,
-            clickUrl = "",
-            advertiser = "游戏广告商"
-        )
-        
-        FullScreenAdActivity.startForResult(context as Activity, sampleAd, 1001)
-    }
     // 标题动画
     val infiniteTransition = rememberInfiniteTransition(label = "title_animation")
     
@@ -271,14 +247,6 @@ fun MainMenuScreen(
             Spacer(modifier = Modifier.height(20.dp))
             
             AnimatedMenuButton(
-                text = "🎬 观看广告",
-                onClick = startAd,
-                backgroundColor = GameColors.AccentPink
-            )
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            AnimatedMenuButton(
                 text = "🏆 排行榜",
                 onClick = onLeaderboard,
                 backgroundColor = GameColors.AccentOrange
@@ -346,7 +314,7 @@ fun MainMenuScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Text(
-                            text = "🎯 点击屏幕从下方发射彩色数字针\n💫 针按顺序发射，每个都有独特颜色\n📊 中心显示剩余针数，底部显示发射队列\n🎪 多种关卡类型：普通、高速、反向、变速等\n🎬 观看广告获得金币奖励！\n✨ 精美的视觉效果和流畅动画",
+                            text = "🎯 点击屏幕从下方发射彩色数字针\n💫 针按顺序发射，每个都有独特颜色\n📊 中心显示剩余针数，底部显示发射队列\n🎪 多种关卡类型：普通、高速、反向、变速等\n🎮 游戏中观看广告获得金币奖励！\n✨ 精美的视觉效果和流畅动画",
                             fontSize = 14.sp,
                             color = Color.White.copy(alpha = 0.9f),
                             lineHeight = 22.sp

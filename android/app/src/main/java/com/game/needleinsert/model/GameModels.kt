@@ -146,6 +146,14 @@ data class AdReward(
     @SerializedName("message") val message: String? = "观看完成"
 )
 
+data class CoinRecord(
+    @SerializedName("id") val id: Int,
+    @SerializedName("amount") val amount: Int,
+    @SerializedName("type") val type: String, // "ad_watch", "game_reward", "withdraw"
+    @SerializedName("description") val description: String,
+    @SerializedName("created_at") val createdAt: String
+)
+
 // 广告观看状态
 enum class AdState {
     NONE,        // 无广告

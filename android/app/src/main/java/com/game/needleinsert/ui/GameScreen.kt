@@ -18,6 +18,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,8 +53,21 @@ fun GameScreen(
     // 初始化游戏
     LaunchedEffect(Unit) {
         viewModel.initGame(screenWidth, screenHeight)
-        // 重置广告状态，防止从全屏广告返回时状态异常
-        viewModel.resetAdState()
+    }
+    
+    // 监听Activity生命周期，当从广告Activity返回时刷新金币
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Activity恢复时刷新金币（可能从广告Activity返回）
+                viewModel.resetAdState()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
     
     AnimatedBackground(

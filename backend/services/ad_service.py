@@ -30,11 +30,10 @@ class AdService:
         for watch in today_watches:
             ad_watch_count[watch.ad_id] = ad_watch_count.get(watch.ad_id, 0) + 1
         
-        # 获取当前有效的广告（只显示网页广告）
+        # 获取当前有效的广告
         now = datetime.now()
         available_ads = db.query(AdConfig).filter(
             AdConfig.status == AdStatus.ACTIVE,
-            AdConfig.ad_type == 'webpage',  # 只返回网页广告
             or_(AdConfig.start_time.is_(None), AdConfig.start_time <= now),
             or_(AdConfig.end_time.is_(None), AdConfig.end_time >= now)
         ).all()
@@ -56,8 +55,13 @@ class AdService:
     @staticmethod
     def watch_ad(db: Session, user_id: int, watch_request: AdWatchRequest, ip_address: str = None) -> dict:
         """处理广告观看"""
-        # 获取广告配置
-        ad = db.query(AdConfig).filter(AdConfig.id == watch_request.ad_id).first()
+        # 获取广告配置 - 将字符串ID转换为整数
+        try:
+            ad_id = int(watch_request.ad_id)
+        except ValueError:
+            return {"success": False, "message": "无效的广告ID格式"}
+            
+        ad = db.query(AdConfig).filter(AdConfig.id == ad_id).first()
         if not ad or ad.status != AdStatus.ACTIVE:
             return {"success": False, "message": "广告不存在或已下线"}
         
@@ -68,7 +72,7 @@ class AdService:
             min_duration = ConfigService.get_webpage_ad_min_duration(db)
         
         # 检查观看时长是否达标
-        is_completed = watch_request.watch_duration >= min_duration
+        is_completed = watch_request.is_completed or watch_request.watch_duration >= min_duration
         
         # 计算奖励金币（使用配置的动态奖励范围）
         if is_completed:
@@ -87,7 +91,7 @@ class AdService:
         today = date.today()
         today_count = db.query(func.count(AdWatchRecord.id)).filter(
             AdWatchRecord.user_id == user_id,
-            AdWatchRecord.ad_id == watch_request.ad_id,
+            AdWatchRecord.ad_id == ad_id,
             func.date(AdWatchRecord.watch_time) == today
         ).scalar()
         
@@ -107,7 +111,7 @@ class AdService:
         # 记录观看记录
         watch_record = AdWatchRecord(
             user_id=user_id,
-            ad_id=watch_request.ad_id,
+            ad_id=ad_id,
             watch_duration=watch_request.watch_duration,
             reward_coins=reward_coins,
             is_completed=1 if is_completed else 0,
@@ -273,6 +277,7 @@ class AdService:
         default_ads = [
             {
                 "name": "游戏推广广告",
+                "ad_type": "video",
                 "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                 "duration": 30,
                 "reward_coins": default_reward,  # 使用配置的默认值
@@ -282,7 +287,8 @@ class AdService:
                 "status": AdStatus.ACTIVE
             },
             {
-                "name": "应用下载广告", 
+                "name": "应用下载广告",
+                "ad_type": "video",
                 "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
                 "duration": 25,
                 "reward_coins": max_coins,  # 使用配置的最大值
@@ -293,6 +299,7 @@ class AdService:
             },
             {
                 "name": "品牌推广广告",
+                "ad_type": "video",
                 "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
                 "duration": 15,
                 "reward_coins": 30,
@@ -303,6 +310,7 @@ class AdService:
             },
             {
                 "name": "购物广告",
+                "ad_type": "video",
                 "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", 
                 "duration": 20,
                 "reward_coins": 60,
