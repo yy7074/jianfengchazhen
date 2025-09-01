@@ -116,11 +116,32 @@ fun WithdrawScreen(
             }
         }
         
-        // 提示信息
+        // 错误信息显示
+        if (uiState.error != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.clearError() },
+                title = { Text("提示") },
+                text = { Text(uiState.error!!) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.clearError() }) {
+                        Text("确定")
+                    }
+                }
+            )
+        }
+        
+        // 成功信息显示
         if (uiState.message != null) {
-            LaunchedEffect(uiState.message) {
-                // 这里可以显示 SnackBar 或 Toast
-            }
+            AlertDialog(
+                onDismissRequest = { viewModel.clearMessage() },
+                title = { Text("提示") },
+                text = { Text(uiState.message!!) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.clearMessage() }) {
+                        Text("确定")
+                    }
+                }
+            )
         }
     }
 }

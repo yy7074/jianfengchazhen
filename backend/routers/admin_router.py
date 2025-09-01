@@ -80,6 +80,17 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "stats": stats
     })
 
+# 提现管理页面
+@router.get("/withdraws", response_class=HTMLResponse)
+async def withdraw_management_page(request: Request):
+    """提现审核管理页面"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    return templates.TemplateResponse("admin/withdraw_management.html", {
+        "request": request
+    })
+
 # API接口
 @router.get("/api/stats")
 async def get_admin_stats(db: Session = Depends(get_db)):
@@ -398,16 +409,54 @@ async def get_withdraw_requests(
     status: str = None,
     page: int = 1,
     size: int = 20,
+    start_date: str = None,
+    end_date: str = None,
+    min_amount: float = None,
+    max_amount: float = None,
+    user_id: int = None,
+    search: str = None,
     db: Session = Depends(get_db)
 ):
-    """获取提现申请列表"""
+    """获取提现申请列表（支持高级筛选）"""
     if not verify_admin():
         raise HTTPException(status_code=401, detail="需要管理员权限")
     
     query = db.query(WithdrawRequest).join(User)
     
+    # 状态筛选
     if status:
         query = query.filter(WithdrawRequest.status == status)
+    
+    # 时间范围筛选
+    if start_date:
+        from datetime import datetime
+        start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        query = query.filter(WithdrawRequest.request_time >= start_dt)
+    
+    if end_date:
+        from datetime import datetime
+        end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        query = query.filter(WithdrawRequest.request_time <= end_dt)
+    
+    # 金额范围筛选
+    if min_amount is not None:
+        query = query.filter(WithdrawRequest.amount >= min_amount)
+    
+    if max_amount is not None:
+        query = query.filter(WithdrawRequest.amount <= max_amount)
+    
+    # 用户ID筛选
+    if user_id:
+        query = query.filter(WithdrawRequest.user_id == user_id)
+    
+    # 搜索筛选（用户昵称、支付宝账号、真实姓名）
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (User.nickname.like(search_pattern)) |
+            (WithdrawRequest.alipay_account.like(search_pattern)) |
+            (WithdrawRequest.real_name.like(search_pattern))
+        )
     
     total = query.count()
     skip = (page - 1) * size
@@ -420,6 +469,11 @@ async def get_withdraw_requests(
         item["user_nickname"] = w.user.nickname
         items.append(item)
     
+    # 计算统计信息
+    total_amount = db.query(func.sum(WithdrawRequest.amount)).filter(
+        WithdrawRequest.id.in_([w.id for w in withdraws])
+    ).scalar() or 0
+    
     return BaseResponse(
         message="获取成功",
         data={
@@ -427,42 +481,229 @@ async def get_withdraw_requests(
             "total": total,
             "page": page,
             "size": size,
-            "pages": (total + size - 1) // size
+            "pages": (total + size - 1) // size,
+            "statistics": {
+                "current_page_amount": float(total_amount),
+                "current_page_count": len(items)
+            }
         }
+    )
+
+@router.get("/api/withdraws/{withdraw_id}")
+async def get_withdraw_detail(
+    withdraw_id: int,
+    db: Session = Depends(get_db)
+):
+    """获取提现申请详细信息"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    # 查询提现申请
+    withdraw = db.query(WithdrawRequest).filter(
+        WithdrawRequest.id == withdraw_id
+    ).first()
+    
+    if not withdraw:
+        raise HTTPException(status_code=404, detail="提现申请不存在")
+    
+    # 查询用户信息
+    user = db.query(User).filter(User.id == withdraw.user_id).first()
+    
+    # 查询用户的提现历史
+    user_withdraw_history = db.query(WithdrawRequest).filter(
+        WithdrawRequest.user_id == withdraw.user_id
+    ).order_by(WithdrawRequest.request_time.desc()).limit(10).all()
+    
+    # 查询用户的金币记录
+    from models import CoinTransaction
+    coin_transactions = db.query(CoinTransaction).filter(
+        CoinTransaction.user_id == withdraw.user_id
+    ).order_by(CoinTransaction.created_time.desc()).limit(10).all()
+    
+    # 计算用户统计
+    total_withdraws = db.query(func.count(WithdrawRequest.id)).filter(
+        WithdrawRequest.user_id == withdraw.user_id
+    ).scalar() or 0
+    
+    total_withdraw_amount = db.query(func.sum(WithdrawRequest.amount)).filter(
+        WithdrawRequest.user_id == withdraw.user_id,
+        WithdrawRequest.status.in_(['approved', 'completed'])
+    ).scalar() or 0
+    
+    # 构建详细信息
+    detail_info = {
+        "withdraw_info": {
+            "id": withdraw.id,
+            "amount": float(withdraw.amount),
+            "coins_used": float(withdraw.coins_used),
+            "alipay_account": withdraw.alipay_account,
+            "real_name": withdraw.real_name,
+            "status": withdraw.status.value if hasattr(withdraw.status, 'value') else str(withdraw.status),
+            "admin_note": withdraw.admin_note,
+            "request_time": withdraw.request_time.isoformat() if withdraw.request_time else None,
+            "process_time": withdraw.process_time.isoformat() if withdraw.process_time else None
+        },
+        "user_info": {
+            "id": user.id,
+            "nickname": user.nickname,
+            "device_id": user.device_id,
+            "current_coins": float(user.coins),
+            "total_coins": float(user.total_coins),
+            "level": user.level,
+            "register_time": user.register_time.isoformat() if user.register_time else None,
+            "last_login_time": user.last_login_time.isoformat() if user.last_login_time else None
+        },
+        "user_statistics": {
+            "total_withdraws": total_withdraws,
+            "total_withdraw_amount": float(total_withdraw_amount),
+            "avg_withdraw_amount": float(total_withdraw_amount / total_withdraws) if total_withdraws > 0 else 0
+        },
+        "recent_withdraws": [
+            {
+                "id": w.id,
+                "amount": float(w.amount),
+                "status": w.status.value if hasattr(w.status, 'value') else str(w.status),
+                "request_time": w.request_time.isoformat() if w.request_time else None
+            } for w in user_withdraw_history[:5]
+        ],
+        "recent_transactions": [
+            {
+                "id": t.id,
+                "type": t.type.value if hasattr(t.type, 'value') else str(t.type),
+                "amount": float(t.amount),
+                "description": t.description,
+                "created_time": t.created_time.isoformat() if t.created_time else None
+            } for t in coin_transactions[:5]
+        ]
+    }
+    
+    return BaseResponse(
+        message="获取成功",
+        data=detail_info
     )
 
 @router.put("/api/withdraws/{withdraw_id}/approve")
 async def approve_withdraw(
     withdraw_id: int,
-    admin_note: str = None,
+    request_data: dict = None,
     db: Session = Depends(get_db)
 ):
     """批准提现申请"""
     if not verify_admin():
         raise HTTPException(status_code=401, detail="需要管理员权限")
     
+    admin_note = None
+    if request_data:
+        admin_note = request_data.get("admin_note")
+    
     from services.withdraw_service import WithdrawService
     
     result = WithdrawService.approve_withdraw(db, withdraw_id, admin_note)
     if result["success"]:
-        return BaseResponse(message=result["message"])
+        return BaseResponse(
+            message=result["message"],
+            data=result.get("data", {})
+        )
     else:
         raise HTTPException(status_code=400, detail=result["message"])
 
 @router.put("/api/withdraws/{withdraw_id}/reject")
 async def reject_withdraw(
     withdraw_id: int,
-    admin_note: str,
+    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """拒绝提现申请"""
     if not verify_admin():
         raise HTTPException(status_code=401, detail="需要管理员权限")
     
+    admin_note = request_data.get("admin_note", "").strip()
+    if not admin_note:
+        raise HTTPException(status_code=400, detail="拒绝时必须填写备注原因")
+    
     from services.withdraw_service import WithdrawService
     
     result = WithdrawService.reject_withdraw(db, withdraw_id, admin_note)
     if result["success"]:
-        return BaseResponse(message=result["message"])
+        return BaseResponse(
+            message=result["message"],
+            data=result.get("data", {})
+        )
     else:
-        raise HTTPException(status_code=400, detail=result["message"]) 
+        raise HTTPException(status_code=400, detail=result["message"])
+
+# 批量操作API
+@router.post("/api/withdraws/batch-approve")
+async def batch_approve_withdraws(
+    request_data: dict,
+    db: Session = Depends(get_db)
+):
+    """批量批准提现申请"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    withdraw_ids = request_data.get("withdraw_ids", [])
+    admin_note = request_data.get("admin_note", "批量批准")
+    
+    if not withdraw_ids:
+        raise HTTPException(status_code=400, detail="请选择要批准的申请")
+    
+    from services.withdraw_service import WithdrawService
+    
+    success_count = 0
+    failed_items = []
+    
+    for withdraw_id in withdraw_ids:
+        result = WithdrawService.approve_withdraw(db, withdraw_id, admin_note)
+        if result["success"]:
+            success_count += 1
+        else:
+            failed_items.append({"id": withdraw_id, "error": result["message"]})
+    
+    return BaseResponse(
+        message=f"批量操作完成，成功{success_count}个，失败{len(failed_items)}个",
+        data={
+            "success_count": success_count,
+            "failed_count": len(failed_items),
+            "failed_items": failed_items
+        }
+    )
+
+@router.post("/api/withdraws/batch-reject")
+async def batch_reject_withdraws(
+    request_data: dict,
+    db: Session = Depends(get_db)
+):
+    """批量拒绝提现申请"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    withdraw_ids = request_data.get("withdraw_ids", [])
+    admin_note = request_data.get("admin_note", "批量拒绝")
+    
+    if not withdraw_ids:
+        raise HTTPException(status_code=400, detail="请选择要拒绝的申请")
+    
+    if not admin_note or admin_note.strip() == "":
+        raise HTTPException(status_code=400, detail="拒绝时必须填写备注")
+    
+    from services.withdraw_service import WithdrawService
+    
+    success_count = 0
+    failed_items = []
+    
+    for withdraw_id in withdraw_ids:
+        result = WithdrawService.reject_withdraw(db, withdraw_id, admin_note)
+        if result["success"]:
+            success_count += 1
+        else:
+            failed_items.append({"id": withdraw_id, "error": result["message"]})
+    
+    return BaseResponse(
+        message=f"批量操作完成，成功{success_count}个，失败{len(failed_items)}个",
+        data={
+            "success_count": success_count,
+            "failed_count": len(failed_items),
+            "failed_items": failed_items
+        }
+    ) 

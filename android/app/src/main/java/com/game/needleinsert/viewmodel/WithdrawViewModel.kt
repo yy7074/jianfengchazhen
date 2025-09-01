@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 class WithdrawViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(WithdrawUiState())
@@ -162,6 +164,14 @@ class WithdrawViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(realName = name)
     }
     
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
+    
+    fun clearMessage() {
+        _uiState.value = _uiState.value.copy(message = null)
+    }
+    
     fun submitWithdrawRequest() {
         viewModelScope.launch {
             try {
@@ -213,7 +223,30 @@ class WithdrawViewModel : ViewModel() {
                 // 调用提现申请API
                 val response = apiService.submitWithdrawRequest(currentUser.id.toString(), requestBody)
                 
-                if (!response.isSuccessful || response.body()?.code != 200) {
+                if (!response.isSuccessful) {
+                    // 处理HTTP错误（如400, 500等）
+                    val errorBody = response.errorBody()?.string()
+                    val errorMessage = try {
+                        // 尝试解析错误响应JSON
+                        val gson = Gson()
+                        val errorResponse = gson.fromJson(errorBody, object : TypeToken<Map<String, Any>>() {}.type) as Map<String, Any>
+                        // 优先使用detail字段，其次是message字段
+                        errorResponse["detail"] as? String ?: errorResponse["message"] as? String ?: "提交失败，请重试"
+                    } catch (e: Exception) {
+                        Log.e("WithdrawViewModel", "解析错误响应失败: $errorBody", e)
+                        "提交失败，请重试"
+                    }
+                    
+                    Log.d("WithdrawViewModel", "提现失败: $errorMessage")
+                    _uiState.value = _uiState.value.copy(
+                        isSubmitting = false,
+                        error = errorMessage
+                    )
+                    return@launch
+                }
+                
+                // 处理成功响应但业务逻辑错误
+                if (response.body()?.code != 200) {
                     _uiState.value = _uiState.value.copy(
                         isSubmitting = false,
                         error = response.body()?.message ?: "提交失败，请重试"

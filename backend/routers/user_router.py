@@ -166,25 +166,18 @@ async def submit_withdraw_request(
     from services.withdraw_service import WithdrawService
     
     try:
-        print(f"DEBUG: user_id={user_id}, withdraw_data={withdraw_data}")
         result = WithdrawService.submit_withdraw_request(db, user_id, withdraw_data)
-        print(f"DEBUG: result={result}")
         if result["success"]:
             return BaseResponse(
                 message="提现申请提交成功，请等待审核",
                 data=result["data"]
             )
         else:
-            error_msg = result.get("message", "未知错误")
-            print(f"DEBUG: Withdraw failed: {error_msg}")
-            raise HTTPException(status_code=400, detail=error_msg)
+            raise HTTPException(status_code=400, detail=result["message"])
     except HTTPException:
-        raise  # 重新抛出HTTP异常，不要被catch
+        raise
     except Exception as e:
-        import traceback
-        error_detail = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
-        print(f"DEBUG: Exception occurred: {error_detail}")
-        raise HTTPException(status_code=500, detail=error_detail)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/withdraw/history/{user_id}")
 async def get_withdraw_history(
