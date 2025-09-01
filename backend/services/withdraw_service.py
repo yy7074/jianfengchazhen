@@ -19,11 +19,11 @@ class WithdrawService:
             return {"success": False, "message": "用户不存在"}
         
         # 获取系统配置
-        min_amount = ConfigService.get_min_withdraw_amount(db)
-        max_amount = ConfigService.get_max_withdraw_amount(db)
-        coin_rate = ConfigService.get_coin_to_rmb_rate(db)
-        min_coins = ConfigService.get_withdrawal_min_coins(db)
-        fee_rate = ConfigService.get_withdrawal_fee_rate(db)
+        min_amount = float(ConfigService.get_min_withdraw_amount(db))
+        max_amount = float(ConfigService.get_max_withdraw_amount(db))
+        coin_rate = float(ConfigService.get_coin_to_rmb_rate(db))
+        min_coins = float(ConfigService.get_withdrawal_min_coins(db))
+        fee_rate = float(ConfigService.get_withdrawal_fee_rate(db))
         
         # 验证提现金额
         if withdraw_data.amount < min_amount:
@@ -33,8 +33,9 @@ class WithdrawService:
             return {"success": False, "message": f"提现金额不能超过{max_amount}元"}
         
         # 计算需要消耗的金币（包含手续费）
-        base_coins = ConfigService.calculate_coins_needed(db, withdraw_data.amount)
-        fee_coins = base_coins * fee_rate / 100 if fee_rate > 0 else 0
+        withdraw_amount = float(withdraw_data.amount)
+        base_coins = withdraw_amount * coin_rate  # 基础金币需求
+        fee_coins = (base_coins * fee_rate / 100.0) if fee_rate > 0 else 0.0
         coins_needed = base_coins + fee_coins
         
         # 验证用户金币是否达到最小提现要求

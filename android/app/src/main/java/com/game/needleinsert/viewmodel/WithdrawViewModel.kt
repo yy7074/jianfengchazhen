@@ -3,6 +3,7 @@ package com.game.needleinsert.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.game.needleinsert.model.WithdrawRequest
 import com.game.needleinsert.network.RetrofitClient
 import com.game.needleinsert.utils.UserManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +30,9 @@ class WithdrawViewModel : ViewModel() {
         val realName: String = "",
         val withdrawHistory: List<WithdrawRecord> = emptyList(),
         val message: String? = null,
-        val error: String? = null
+        val error: String? = null,
+        val coinToRmbRate: Double = 33000.0, // 默认33000金币=1元，从后台动态获取
+        val exchangeRateText: String = "33000金币 ≈ ¥1.00"
     ) {
         val canSubmit: Boolean
             get() = selectedAmount != null &&
@@ -49,17 +52,51 @@ class WithdrawViewModel : ViewModel() {
     fun loadUserInfo() {
         viewModelScope.launch {
             try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                
                 val currentUser = UserManager.getCurrentUser()
                 if (currentUser != null) {
-                    val withdrawableAmount = currentUser.coins / 33000.0 // 33000金币 = 1元
+                    // 获取动态兑换比例
+                    val coinToRmbRate = loadExchangeRate()
+                    val withdrawableAmount = currentUser.coins / coinToRmbRate
+                    val exchangeRateText = "${coinToRmbRate.toInt()}金币 ≈ ¥1.00"
+                    
                     _uiState.value = _uiState.value.copy(
                         currentCoins = currentUser.coins,
-                        withdrawableAmount = withdrawableAmount
+                        withdrawableAmount = withdrawableAmount,
+                        coinToRmbRate = coinToRmbRate,
+                        exchangeRateText = exchangeRateText,
+                        isLoading = false
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "用户未登录"
                     )
                 }
             } catch (e: Exception) {
                 Log.e("WithdrawViewModel", "加载用户信息失败", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "加载失败: ${e.message}"
+                )
             }
+        }
+    }
+    
+    private suspend fun loadExchangeRate(): Double {
+        return try {
+            val response = apiService.getSystemConfig("coin_to_rmb_rate")
+            if (response.isSuccessful && response.body()?.code == 200) {
+                val configValue = response.body()?.data?.get("config_value") as? String
+                configValue?.toDoubleOrNull() ?: 33000.0
+            } else {
+                Log.w("WithdrawViewModel", "获取兑换比例失败，使用默认值")
+                33000.0
+            }
+        } catch (e: Exception) {
+            Log.e("WithdrawViewModel", "获取兑换比例异常，使用默认值", e)
+            33000.0
         }
     }
     
@@ -167,14 +204,14 @@ class WithdrawViewModel : ViewModel() {
                 }
                 
                 // 构建提现请求
-                val requestBody = mapOf(
-                    "amount" to amount,
-                    "alipay_account" to _uiState.value.alipayAccount,
-                    "real_name" to _uiState.value.realName
+                val requestBody = WithdrawRequest(
+                    amount = amount,
+                    alipayAccount = _uiState.value.alipayAccount,
+                    realName = _uiState.value.realName
                 )
                 
                 // 调用提现申请API
-                val response = apiService.submitWithdrawRequest(currentUser.id, requestBody)
+                val response = apiService.submitWithdrawRequest(currentUser.id.toString(), requestBody)
                 
                 if (!response.isSuccessful || response.body()?.code != 200) {
                     _uiState.value = _uiState.value.copy(

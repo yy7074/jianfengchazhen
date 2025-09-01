@@ -1121,8 +1121,11 @@
                                         ${ad.status === 1 ? '启用' : '禁用'}
                                     </span>
                                 </div>
-                                <div style="display: flex; gap: 10px;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
                                     <span class="status-badge">${ad.ad_type === 'video' ? '视频' : '网页'}</span>
+                                    <button class="btn btn-primary" onclick="editAd(${ad.id}, '${ad.name}', '${ad.ad_type}', '${ad.video_url || ''}', '${ad.webpage_url || ''}', ${ad.duration}, ${ad.reward_coins}, ${ad.weight}, ${ad.status})" style="padding: 4px 8px; font-size: 12px;">编辑</button>
+                                    <button class="btn btn-danger" onclick="deleteAd(${ad.id}, '${ad.name}')" style="padding: 4px 8px; font-size: 12px;">删除</button>
+                                    <button class="btn ${ad.status === 1 ? 'btn-warning' : 'btn-success'}" onclick="toggleAdStatus(${ad.id}, ${ad.status})" style="padding: 4px 8px; font-size: 12px;">${ad.status === 1 ? '禁用' : '启用'}</button>
                                 </div>
                             </div>
                             <div>
@@ -1596,6 +1599,222 @@
                 }
             } catch (error) {
                 alert('保存失败: ' + error.message);
+            }
+        }
+
+        // 广告编辑功能
+        function editAd(adId, name, adType, videoUrl, webpageUrl, duration, rewardCoins, weight, status) {
+            // 创建编辑表单的 HTML
+            const modalHTML = `
+                <div id="adEditModal" style="
+                    position: fixed; 
+                    top: 0; 
+                    left: 0; 
+                    width: 100%; 
+                    height: 100%; 
+                    background: rgba(0,0,0,0.5); 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    z-index: 10000;
+                ">
+                    <div style="
+                        background: white; 
+                        padding: 30px; 
+                        border-radius: 12px; 
+                        min-width: 500px; 
+                        max-width: 600px;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                        max-height: 80vh;
+                        overflow-y: auto;
+                    ">
+                        <h3 style="margin-bottom: 20px; color: #333;">编辑广告</h3>
+                        <div class="form-group">
+                            <label class="form-label">广告名称</label>
+                            <input type="text" id="editAdName" class="form-input" value="${name}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">广告类型</label>
+                            <select id="editAdType" class="form-select" onchange="toggleEditAdInputs()" required>
+                                <option value="video" ${adType === 'video' ? 'selected' : ''}>视频广告</option>
+                                <option value="webpage" ${adType === 'webpage' ? 'selected' : ''}>网页广告</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="editVideoUrlGroup" style="display: ${adType === 'video' ? 'block' : 'none'};">
+                            <label class="form-label">视频URL</label>
+                            <input type="url" id="editAdVideoUrl" class="form-input" value="${videoUrl}" placeholder="https://example.com/video.mp4">
+                        </div>
+                        <div class="form-group" id="editWebpageUrlGroup" style="display: ${adType === 'webpage' ? 'block' : 'none'};">
+                            <label class="form-label">网页跳转URL</label>
+                            <input type="url" id="editAdWebpageUrl" class="form-input" value="${webpageUrl}" placeholder="https://example.com/landing-page">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">展示时长（秒）</label>
+                            <input type="number" id="editAdDuration" class="form-input" value="${duration}" required min="1" max="300">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">奖励金币</label>
+                            <input type="number" id="editAdReward" class="form-input" value="${rewardCoins}" required min="1" max="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">权重</label>
+                            <input type="number" id="editAdWeight" class="form-input" value="${weight}" required min="1" max="100">
+                            <small style="color: #6b7280;">权重越高，被选中的概率越大</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">状态</label>
+                            <select id="editAdStatus" class="form-select" required>
+                                <option value="1" ${status === 1 ? 'selected' : ''}>启用</option>
+                                <option value="0" ${status === 0 ? 'selected' : ''}>禁用</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="closeAdEditModal()">取消</button>
+                            <button class="btn btn-primary" onclick="saveAdEdit(${adId})">保存</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 添加模态框到页面
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+        
+        function toggleEditAdInputs() {
+            const adType = document.getElementById('editAdType').value;
+            const videoGroup = document.getElementById('editVideoUrlGroup');
+            const webpageGroup = document.getElementById('editWebpageUrlGroup');
+            
+            if (adType === 'video') {
+                videoGroup.style.display = 'block';
+                webpageGroup.style.display = 'none';
+            } else {
+                videoGroup.style.display = 'none';
+                webpageGroup.style.display = 'block';
+            }
+        }
+        
+        function closeAdEditModal() {
+            const modal = document.getElementById('adEditModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        async function saveAdEdit(adId) {
+            const adType = document.getElementById('editAdType').value;
+            const adData = {
+                name: document.getElementById('editAdName').value,
+                ad_type: adType,
+                duration: parseInt(document.getElementById('editAdDuration').value),
+                reward_coins: parseFloat(document.getElementById('editAdReward').value),
+                weight: parseInt(document.getElementById('editAdWeight').value),
+                status: parseInt(document.getElementById('editAdStatus').value) === 1 ? 'ACTIVE' : 'INACTIVE'
+            };
+            
+            if (adType === 'video') {
+                adData.video_url = document.getElementById('editAdVideoUrl').value;
+            } else {
+                adData.webpage_url = document.getElementById('editAdWebpageUrl').value;
+            }
+            
+            // 验证输入
+            if (!adData.name.trim()) {
+                alert('请输入广告名称');
+                return;
+            }
+            
+            if (adType === 'video' && !adData.video_url) {
+                alert('请输入视频URL');
+                return;
+            }
+            
+            if (adType === 'webpage' && !adData.webpage_url) {
+                alert('请输入网页URL');
+                return;
+            }
+            
+            if (adData.duration < 1 || adData.duration > 300) {
+                alert('展示时长必须在1-300秒之间');
+                return;
+            }
+            
+            if (adData.reward_coins < 1 || adData.reward_coins > 1000) {
+                alert('奖励金币必须在1-1000之间');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/api/ads/${adId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(adData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    alert('广告更新成功！');
+                    closeAdEditModal();
+                    loadAds();
+                } else {
+                    alert('更新失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('更新失败: ' + error.message);
+            }
+        }
+
+        // 删除广告
+        async function deleteAd(adId, adName) {
+            if (!confirm(`确定要删除广告"${adName}"吗？此操作不可恢复！`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/api/ads/${adId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    alert('广告删除成功！');
+                    loadAds();
+                } else {
+                    alert('删除失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // 切换广告状态
+        async function toggleAdStatus(adId, currentStatus) {
+            const newStatus = currentStatus === 1 ? 'INACTIVE' : 'ACTIVE';
+            const action = currentStatus === 1 ? '禁用' : '启用';
+            
+            if (!confirm(`确定要${action}这个广告吗？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/api/ads/${adId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    alert(`广告${action}成功！`);
+                    loadAds();
+                } else {
+                    alert(`${action}失败: ` + result.message);
+                }
+            } catch (error) {
+                alert(`${action}失败: ` + error.message);
             }
         }
     </script>

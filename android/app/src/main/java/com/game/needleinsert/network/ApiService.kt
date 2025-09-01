@@ -25,11 +25,11 @@ interface ApiService {
     @GET("api/user/{user_id}/withdraws")
     suspend fun getWithdrawHistory(@Path("user_id") userId: String): Response<BaseResponse<List<Map<String, Any>>>>
     
-    @POST("api/user/{user_id}/withdraw")
+    @POST("api/user/withdraw")
     suspend fun submitWithdrawRequest(
-        @Path("user_id") userId: String,
-        @Body request: Map<String, Any>
-    ): Response<BaseResponse<Map<String, Any>>>
+        @Query("user_id") userId: String,
+        @Body request: WithdrawRequest
+    ): Response<BaseResponse<WithdrawResponse>>
     
     // 广告相关接口
     @GET("api/ad/available/{user_id}")
@@ -71,4 +71,8 @@ interface ApiService {
         @Query("period") period: String = "all",
         @Query("limit") limit: Int = 50
     ): Response<BaseResponse<LeaderboardResponse>>
+    
+    // 系统配置相关接口
+    @GET("admin/config/{key}")
+    suspend fun getSystemConfig(@Path("key") key: String): Response<BaseResponse<Map<String, Any>>>
 } 

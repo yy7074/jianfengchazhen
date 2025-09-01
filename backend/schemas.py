@@ -67,7 +67,7 @@ class AdConfigUpdate(BaseModel):
     daily_limit: Optional[int] = Field(None, ge=1)
     min_watch_duration: Optional[int] = Field(None, ge=1)
     weight: Optional[int] = Field(None, ge=1)
-    status: Optional[int] = Field(None, ge=0, le=1)
+    status: Optional[str] = Field(None, pattern="^(ACTIVE|INACTIVE)$")
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
 

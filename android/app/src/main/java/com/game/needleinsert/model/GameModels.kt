@@ -186,4 +186,20 @@ data class LeaderboardPlayer(
     @SerializedName("level") val level: Int = 1,
     @SerializedName("game_count") val gameCount: Int = 0,
     @SerializedName("coins") val coins: Int = 0
+)
+
+// 提现相关数据类
+data class WithdrawRequest(
+    @SerializedName("amount") val amount: Double,
+    @SerializedName("alipay_account") val alipayAccount: String,
+    @SerializedName("real_name") val realName: String
+)
+
+data class WithdrawResponse(
+    @SerializedName("request_id") val requestId: Int,
+    @SerializedName("amount") val amount: Double,
+    @SerializedName("coins_used") val coinsUsed: Double,
+    @SerializedName("fee_coins") val feeCoins: Double,
+    @SerializedName("fee_rate") val feeRate: Double,
+    @SerializedName("status") val status: String
 ) 

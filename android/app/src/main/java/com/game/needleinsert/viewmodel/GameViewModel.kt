@@ -388,7 +388,7 @@ class GameViewModel : ViewModel() {
             AdManager.clearAdCache()
             
             val currentUser = UserManager.getCurrentUser()
-            val userId = currentUser?.id?.toString() ?: "1"
+            val userId = currentUser?.id ?: "1"
             val deviceId = currentUser?.deviceId ?: "device_123"
             
             Log.d("GameViewModel", "请求广告，用户ID: $userId")

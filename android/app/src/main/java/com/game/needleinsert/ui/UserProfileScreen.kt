@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 fun UserProfileScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onLogin: () -> Unit = {},
     viewModel: UserViewModel = viewModel()
 ) {
     val context = LocalContext.current

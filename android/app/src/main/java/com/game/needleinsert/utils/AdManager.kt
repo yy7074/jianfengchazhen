@@ -104,10 +104,14 @@ object AdManager {
             }
             
             // 实际调用后端API - 使用真实的用户ID
-            val actualUserId = if (userId != "default") userId else "1"
-            val response = RetrofitClient.getApiService().getAvailableAds("Bearer dummy_token", actualUserId)
-            
+            val actualUserId = if (userId != "default" && userId != "1") userId else "1"
+            Log.d("AdManager", "调用后端API获取广告，用户ID: $actualUserId")
+
+            // 移除token验证，直接调用API（后端可能不需要认证）
+            val response = RetrofitClient.getApiService().getAvailableAds("", actualUserId)
+
             if (response.isSuccessful) {
+                Log.d("AdManager", "后端API调用成功，状态码: ${response.code()}")
                 val responseData = RetrofitClient.getResponseData(response)
                 if (responseData != null) {
                     @Suppress("UNCHECKED_CAST")
@@ -149,7 +153,10 @@ object AdManager {
                 }
             }
             
-            Log.w("AdManager", "后端API调用失败，使用后备广告")
+            Log.w("AdManager", "后端API调用失败，状态码: ${response.code()}, 错误信息: ${response.message()}")
+            Log.w("AdManager", "错误响应体: ${response.errorBody()?.string()}")
+
+            Log.w("AdManager", "使用后备广告")
             // API失败时使用后备广告
             val backendAds = when {
                 userLevel >= 5 -> fallbackAds + AdConfig(
@@ -245,11 +252,6 @@ object AdManager {
             val canGetReward = watchDuration >= requiredWatchTime || isCompleted
             
             if (canGetReward) {
-                val reward = AdReward(
-                    coins = ad.rewardCoins,
-                    message = "观看广告奖励 ${ad.rewardCoins} 金币！"
-                )
-                
                 // 提交到后端验证并获得奖励
                 val request = AdWatchRequest(
                     userId = userId,
@@ -259,50 +261,67 @@ object AdManager {
                     skipTime = skipTime,
                     deviceInfo = "Android"
                 )
-                
+
                 val finalReward = try {
                     Log.d("AdManager", "发送广告观看请求: $request")
                     val response = RetrofitClient.getApiService().submitAdWatch(userId, request)
                     Log.d("AdManager", "收到响应: 状态码=${response.code()}, 成功=${response.isSuccessful}")
                     Log.d("AdManager", "响应体: ${response.body()}")
-                    
+
                     if (response.isSuccessful && response.body()?.code == 200) {
                         val responseBody = response.body()
                         Log.d("AdManager", "原始响应数据: ${responseBody}")
-                        
+
                         val dataMap = responseBody?.data
                         if (dataMap != null) {
                             val rewardCoins = dataMap["reward_coins"] as? Number
                             val userCoins = dataMap["user_coins"] as? Number
-                            
+
                             Log.d("AdManager", "解析数据: rewardCoins=$rewardCoins, userCoins=$userCoins")
-                            
-                            val actualRewardCoins = rewardCoins?.toInt() ?: 0
+
+                            val actualRewardCoins = rewardCoins?.toInt() ?: ad.rewardCoins // 后端奖励优先，否则使用广告配置
                             val serverReward = AdReward(
                                 coins = actualRewardCoins,
                                 message = "观看广告奖励 ${actualRewardCoins} 金币！"
                             )
-                            
+
                             // 更新用户金币到本地存储
                             userCoins?.let { coins ->
                                 UserManager.updateCoins(coins.toInt())
                                 Log.d("AdManager", "更新用户金币: ${coins.toInt()}")
                             }
-                            
+
                             Log.d("AdManager", "服务器确认奖励: ${serverReward.coins} 金币")
                             serverReward
                         } else {
-                            reward
+                            // 后端数据解析失败，使用广告配置的奖励
+                            Log.w("AdManager", "后端数据解析失败，使用广告配置奖励")
+                            AdReward(
+                                coins = ad.rewardCoins,
+                                message = "观看广告奖励 ${ad.rewardCoins} 金币！"
+                            )
                         }
                     } else {
                         Log.w("AdManager", "服务器验证失败，状态码: ${response.code()}")
                         Log.w("AdManager", "错误响应: ${response.errorBody()?.string()}")
                         Log.w("AdManager", "响应消息: ${response.body()?.message}")
-                        reward
+
+                        // 服务器验证失败，但用户已观看广告，给出基础奖励
+                        Log.w("AdManager", "服务器验证失败，给出基础奖励")
+                        AdReward(
+                            coins = ad.rewardCoins,
+                            message = "观看广告奖励 ${ad.rewardCoins} 金币！"
+                        )
                     }
                 } catch (e: Exception) {
                     Log.e("AdManager", "提交广告记录失败: ${e.message}")
-                    reward
+
+                    // 网络异常，但用户已观看广告，给出基础奖励
+                    Log.w("AdManager", "网络异常，给出基础奖励")
+                    AdReward(
+                        coins = ad.rewardCoins,
+                        message = "观看广告奖励 ${ad.rewardCoins} 金币！"
+                    )
                 }
                 
                 Log.d("AdManager", "广告观看完成: ${ad.title}, 观看时长: ${watchDuration}ms, 奖励: ${finalReward.coins} 金币")

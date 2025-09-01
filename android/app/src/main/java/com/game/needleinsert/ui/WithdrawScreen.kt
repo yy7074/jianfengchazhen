@@ -80,7 +80,8 @@ fun WithdrawScreen(
             item {
                 BalanceCard(
                     currentCoins = uiState.currentCoins,
-                    withdrawableAmount = uiState.withdrawableAmount
+                    withdrawableAmount = uiState.withdrawableAmount,
+                    exchangeRateText = uiState.exchangeRateText
                 )
             }
             
@@ -127,7 +128,8 @@ fun WithdrawScreen(
 @Composable
 fun BalanceCard(
     currentCoins: Int,
-    withdrawableAmount: Double
+    withdrawableAmount: Double,
+    exchangeRateText: String = "33000金币 ≈ ¥1.00"
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -194,7 +196,7 @@ fun BalanceCard(
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                "兑换比例：33000金币 ≈ ¥1.00",
+                "兑换比例：$exchangeRateText",
                 fontSize = 12.sp,
                 color = Color.Gray
             )

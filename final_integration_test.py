@@ -22,7 +22,7 @@ class LeaderboardIntegrationTest:
         """记录测试结果"""
         status = "✅ PASS" if success else "❌ FAIL"
         self.test_results.append({
-            "test": test_name,
+            "test": test_name, 修改
             "success": success,
             呢
             "message": messageda yi xie

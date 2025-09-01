@@ -41,9 +41,15 @@ class UserService:
         return db.query(User).filter(User.device_id == device_id).first()
     
     @staticmethod
-    def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+    def get_user_by_id(db: Session, user_id) -> Optional[User]:
         """根据用户ID获取用户"""
-        return db.query(User).filter(User.id == user_id).first()
+        # 尝试将user_id转换为int，如果失败则直接使用字符串
+        try:
+            user_id_int = int(user_id)
+            return db.query(User).filter(User.id == user_id_int).first()
+        except (ValueError, TypeError):
+            # 如果user_id不是数字，则按字符串处理
+            return db.query(User).filter(User.id == user_id).first()
     
     @staticmethod
     def update_user(db: Session, user_id: int, user_data: UserUpdate) -> Optional[User]:
@@ -88,7 +94,7 @@ class UserService:
         transaction = CoinTransaction(
             user_id=user_id,
             type=transaction_type,
-            amount=amount,
+            amount=amount_decimal,
             balance_after=user.coins,
             description=description,
             related_id=related_id
@@ -114,7 +120,7 @@ class UserService:
         transaction = CoinTransaction(
             user_id=user_id,
             type=transaction_type,
-            amount=-amount,
+            amount=-amount_decimal,
             balance_after=user.coins,
             description=description,
             related_id=related_id

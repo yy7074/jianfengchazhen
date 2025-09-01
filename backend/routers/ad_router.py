@@ -9,7 +9,7 @@ from services.user_service import UserService
 router = APIRouter()
 
 @router.get("/random/{user_id}", response_model=BaseResponse)
-async def get_random_ad(user_id: int, db: Session = Depends(get_db)):
+async def get_random_ad(user_id: str, db: Session = Depends(get_db)):
     """获取随机广告"""
     # 验证用户存在
     user = UserService.get_user_by_id(db, user_id)
@@ -32,7 +32,7 @@ async def get_random_ad(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("/watch/{user_id}", response_model=BaseResponse)
 async def watch_ad(
-    user_id: int,
+    user_id: str,
     watch_request: AdWatchRequest,
     request: Request,
     db: Session = Depends(get_db)
@@ -64,7 +64,7 @@ async def watch_ad(
         raise HTTPException(status_code=400, detail=result["message"])
 
 @router.get("/stats/{user_id}", response_model=BaseResponse)
-async def get_user_ad_stats(user_id: int, db: Session = Depends(get_db)):
+async def get_user_ad_stats(user_id: str, db: Session = Depends(get_db)):
     """获取用户广告观看统计"""
     user = UserService.get_user_by_id(db, user_id)
     if not user:
@@ -79,7 +79,7 @@ async def get_user_ad_stats(user_id: int, db: Session = Depends(get_db)):
 
 @router.get("/history/{user_id}")
 async def get_user_ad_history(
-    user_id: int,
+    user_id: str,
     page: int = 1,
     size: int = 20,
     db: Session = Depends(get_db)
@@ -127,7 +127,7 @@ async def get_user_ad_history(
     )
 
 @router.get("/available/{user_id}")
-async def get_available_ads(user_id: int, db: Session = Depends(get_db)):
+async def get_available_ads(user_id: str, db: Session = Depends(get_db)):
     """获取用户可观看的广告列表"""
     from datetime import date
     from sqlalchemy import func, and_, or_

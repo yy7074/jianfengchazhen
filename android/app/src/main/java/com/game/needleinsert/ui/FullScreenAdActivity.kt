@@ -33,6 +33,7 @@ import com.game.needleinsert.ui.components.AnimatedBackground
 import com.game.needleinsert.ui.components.VideoAdPlayer
 import com.game.needleinsert.ui.components.WebpageAdPlayer
 import com.game.needleinsert.utils.AdManager
+import com.game.needleinsert.utils.UserManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -173,7 +174,8 @@ fun FullScreenAdPlayer(
                 },
                 onAdCompleted = { isCompleted ->
                     coroutineScope.launch {
-                        val reward = AdManager.completeAdWatch("9", isCompleted)
+                        val userId = UserManager.getCurrentUser()?.id?.toString() ?: "1"
+                        val reward = AdManager.completeAdWatch(userId, isCompleted)
                         if (reward != null) {
                             if (isCompleted) {
                                 onAdCompleted(reward.coins, reward.message ?: "观看完成")
@@ -203,7 +205,8 @@ fun FullScreenAdPlayer(
                 },
                 onAdCompleted = { isCompleted ->
                     coroutineScope.launch {
-                        val reward = AdManager.completeAdWatch("9", isCompleted)
+                        val userId = UserManager.getCurrentUser()?.id?.toString() ?: "1"
+                        val reward = AdManager.completeAdWatch(userId, isCompleted)
                         if (reward != null) {
                             if (isCompleted) {
                                 onAdCompleted(reward.coins, reward.message ?: "观看完成")

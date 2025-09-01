@@ -11,7 +11,7 @@ import random
 class AdService:
     
     @staticmethod
-    def get_random_ad(db: Session, user_id: int) -> Optional[AdConfig]:
+    def get_random_ad(db: Session, user_id) -> Optional[AdConfig]:
         """获取随机广告（考虑权重和用户今日观看限制）"""
         # 获取今日观看记录
         today = date.today()
@@ -53,7 +53,7 @@ class AdService:
         return random.choices(eligible_ads, weights=weights, k=1)[0]
     
     @staticmethod
-    def watch_ad(db: Session, user_id: int, watch_request: AdWatchRequest, ip_address: str = None) -> dict:
+    def watch_ad(db: Session, user_id, watch_request: AdWatchRequest, ip_address: str = None) -> dict:
         """处理广告观看"""
         # 获取广告配置 - 将字符串ID转换为整数
         try:
@@ -140,7 +140,7 @@ class AdService:
         }
     
     @staticmethod
-    def get_user_ad_stats(db: Session, user_id: int) -> dict:
+    def get_user_ad_stats(db: Session, user_id) -> dict:
         """获取用户广告观看统计"""
         today = date.today()
         
@@ -205,10 +205,20 @@ class AdService:
     @staticmethod
     def delete_ad_config(db: Session, ad_id: int) -> bool:
         """删除广告配置"""
+        from models import AdWatchRecord
+        
         ad = db.query(AdConfig).filter(AdConfig.id == ad_id).first()
         if not ad:
             return False
         
+        # 检查是否有相关的观看记录
+        watch_records_count = db.query(AdWatchRecord).filter(AdWatchRecord.ad_id == ad_id).count()
+        
+        if watch_records_count > 0:
+            # 如果有观看记录，先删除相关记录
+            db.query(AdWatchRecord).filter(AdWatchRecord.ad_id == ad_id).delete()
+        
+        # 删除广告配置
         db.delete(ad)
         db.commit()
         return True

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
 from schemas import *
-from models import GameRecord, AdWatchRecord, CoinTransaction, WithdrawRequest as WithdrawRequestModel
+from models import GameRecord, AdWatchRecord, CoinTransaction as CoinTransactionModel, WithdrawRequest as WithdrawRequestModel
 from services.user_service import UserService
 from services.ad_service import AdService
 from typing import List
@@ -111,16 +111,30 @@ async def get_coin_history(
     
     # 分页查询金币流水
     skip = (page - 1) * size
-    transactions = db.query(CoinTransaction).filter(
-        CoinTransaction.user_id == user_id
-    ).order_by(CoinTransaction.created_time.desc()).offset(skip).limit(size).all()
+    transactions = db.query(CoinTransactionModel).filter(
+        CoinTransactionModel.user_id == user_id
+    ).order_by(CoinTransactionModel.created_time.desc()).offset(skip).limit(size).all()
     
-    total = db.query(CoinTransaction).filter(CoinTransaction.user_id == user_id).count()
+    total = db.query(CoinTransactionModel).filter(CoinTransactionModel.user_id == user_id).count()
+    
+    # 手动构建响应数据
+    transaction_data = []
+    for t in transactions:
+        transaction_record = {
+            "id": t.id,
+            "user_id": t.user_id,
+            "type": t.type.value if hasattr(t.type, 'value') else str(t.type),
+            "amount": float(t.amount),
+            "balance_after": float(t.balance_after),
+            "description": t.description,
+            "created_time": t.created_time.isoformat() if t.created_time else None
+        }
+        transaction_data.append(transaction_record)
     
     return BaseResponse(
         message="获取成功",
         data={
-            "items": [CoinTransaction.from_orm(t).dict() for t in transactions],
+            "items": transaction_data,
             "total": total,
             "page": page,
             "size": size,
@@ -152,16 +166,25 @@ async def submit_withdraw_request(
     from services.withdraw_service import WithdrawService
     
     try:
+        print(f"DEBUG: user_id={user_id}, withdraw_data={withdraw_data}")
         result = WithdrawService.submit_withdraw_request(db, user_id, withdraw_data)
+        print(f"DEBUG: result={result}")
         if result["success"]:
             return BaseResponse(
                 message="提现申请提交成功，请等待审核",
                 data=result["data"]
             )
         else:
-            raise HTTPException(status_code=400, detail=result["message"])
+            error_msg = result.get("message", "未知错误")
+            print(f"DEBUG: Withdraw failed: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+    except HTTPException:
+        raise  # 重新抛出HTTP异常，不要被catch
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_detail = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+        print(f"DEBUG: Exception occurred: {error_detail}")
+        raise HTTPException(status_code=500, detail=error_detail)
 
 @router.get("/withdraw/history/{user_id}")
 async def get_withdraw_history(
@@ -212,9 +235,9 @@ async def get_user_stats(user_id: int, db: Session = Depends(get_db)):
         total_ad_coins_result = db.query(func.sum(AdWatchRecord.reward_coins)).filter(AdWatchRecord.user_id == user_id).scalar()
         
         # 获取金币统计
-        total_coins_earned = db.query(func.sum(CoinTransaction.amount)).filter(
-            CoinTransaction.user_id == user_id,
-            CoinTransaction.amount > 0
+        total_coins_earned = db.query(func.sum(CoinTransactionModel.amount)).filter(
+            CoinTransactionModel.user_id == user_id,
+            CoinTransactionModel.amount > 0
         ).scalar()
         
         stats = {

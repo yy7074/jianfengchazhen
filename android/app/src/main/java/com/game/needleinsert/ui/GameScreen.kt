@@ -17,8 +17,12 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
@@ -32,10 +36,7 @@ import com.game.needleinsert.viewmodel.GameViewModel
 import com.game.needleinsert.ui.theme.GameColors
 import com.game.needleinsert.ui.components.AnimatedBackground
 import com.game.needleinsert.ui.FullScreenAdActivity
-import androidx.activity.result.contract.ActivityResultContracts
-import android.app.Activity
 import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -140,6 +141,20 @@ fun GameScreen(
         // 广告播放界面 - 全屏广告确认对话框
         if (viewModel.gameData.adState == AdState.READY) {
             val context = LocalContext.current
+            val activity = context as? Activity
+            
+            // Activity结果处理 - 注册启动器
+            val adActivityLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    // 广告观看完成，重置广告状态并刷新金币
+                    viewModel.resetAdState()
+                } else {
+                    // 广告被取消
+                    viewModel.cancelAdWatch()
+                }
+            }
             
             AlertDialog(
                 onDismissRequest = { viewModel.cancelAdWatch() },
@@ -172,7 +187,10 @@ fun GameScreen(
                         onClick = {
                             viewModel.currentAd?.let { ad ->
                                 // 启动全屏广告Activity
-                                FullScreenAdActivity.startForResult(context as Activity, ad, 1002)
+                                val intent = android.content.Intent(context, FullScreenAdActivity::class.java).apply {
+                                    putExtra(FullScreenAdActivity.EXTRA_AD_CONFIG, ad)
+                                }
+                                adActivityLauncher.launch(intent)
                                 // 标记为正在播放状态并关闭对话框
                                 viewModel.startPlayingAd()
                             }

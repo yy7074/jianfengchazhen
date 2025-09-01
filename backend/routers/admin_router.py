@@ -349,6 +349,34 @@ async def get_system_configs(db: Session = Depends(get_db)):
         data=[SystemConfigInfo.from_orm(c).dict() for c in configs]
     )
 
+@router.get("/config/{key}")
+async def get_single_config(key: str, db: Session = Depends(get_db)):
+    """获取单个配置"""
+    config = db.query(SystemConfig).filter(SystemConfig.config_key == key).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
+    
+    return BaseResponse(
+        message="获取成功",
+        data=SystemConfigInfo.from_orm(config).dict()
+    )
+
+@router.put("/config/{key}")
+async def update_single_config(
+    key: str, 
+    config_data: SystemConfigUpdate, 
+    db: Session = Depends(get_db)
+):
+    """更新单个配置"""
+    config = ConfigService.set_config(
+        db, key, config_data.config_value, config_data.description
+    )
+    
+    return BaseResponse(
+        message="配置更新成功",
+        data=SystemConfigInfo.from_orm(config).dict()
+    )
+
 @router.put("/api/configs")
 async def update_system_configs(
     config_updates: List[SystemConfigUpdate],
