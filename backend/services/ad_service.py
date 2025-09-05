@@ -195,8 +195,17 @@ class AdService:
         if not ad:
             return None
         
+        # 更新字段，特殊处理status字段
         for field, value in ad_data.dict(exclude_unset=True).items():
-            setattr(ad, field, value)
+            if field == 'status':
+                # 将前端的字符串状态转换为数据库枚举值
+                if value == 'ACTIVE':
+                    setattr(ad, field, 'ACTIVE')  # 直接设置字符串值
+                elif value == 'INACTIVE':
+                    setattr(ad, field, 'DISABLED')  # 数据库中用DISABLED表示禁用状态
+                # 如果是其他值就忽略
+            else:
+                setattr(ad, field, value)
         
         db.commit()
         db.refresh(ad)

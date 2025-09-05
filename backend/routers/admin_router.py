@@ -251,6 +251,13 @@ async def get_ads_list(db: Session = Depends(get_db)):
     # 临时简化，避免Pydantic验证问题
     ads_data = []
     for ad in ads:
+        # 处理状态值，兼容不同的数据类型
+        status_value = ad.status
+        if hasattr(status_value, 'value'):  # 如果是枚举
+            is_active = status_value.value == 1
+        else:  # 如果是字符串
+            is_active = str(status_value).upper() == 'ACTIVE'
+        
         ad_data = {
             "id": ad.id,
             "name": ad.name,
@@ -261,7 +268,7 @@ async def get_ads_list(db: Session = Depends(get_db)):
             "duration": ad.duration,
             "reward_coins": float(ad.reward_coins or 0),
             "weight": ad.weight or 1,
-            "status": 1 if ad.status == 'ACTIVE' else 0
+            "status": 1 if is_active else 0
         }
         ads_data.append(ad_data)
     
@@ -285,17 +292,55 @@ async def create_ad(ad_data: AdConfigCreate, db: Session = Depends(get_db)):
 @router.put("/api/ads/{ad_id}")
 async def update_ad(ad_id: int, ad_data: AdConfigUpdate, db: Session = Depends(get_db)):
     """更新广告"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
-    
-    ad = AdService.update_ad_config(db, ad_id, ad_data)
-    if not ad:
-        raise HTTPException(status_code=404, detail="广告不存在")
-    
-    return BaseResponse(
-        message="更新成功",
-        data=AdConfigInfo.from_orm(ad).dict()
-    )
+    try:
+        if not verify_admin():
+            raise HTTPException(status_code=401, detail="需要管理员权限")
+        
+        # 验证广告ID
+        if ad_id <= 0:
+            raise HTTPException(status_code=400, detail="无效的广告ID")
+        
+        ad = AdService.update_ad_config(db, ad_id, ad_data)
+        if not ad:
+            raise HTTPException(status_code=404, detail="广告不存在")
+        
+        # 处理状态值，兼容不同的数据类型
+        status_value = ad.status
+        if hasattr(status_value, 'value'):  # 如果是枚举
+            is_active = status_value.value == 1
+        else:  # 如果是字符串
+            is_active = str(status_value).upper() == 'ACTIVE'
+        
+        # 手动构建响应数据，避免Pydantic序列化问题
+        ad_data_dict = {
+            "id": ad.id,
+            "name": ad.name,
+            "ad_type": ad.ad_type,
+            "video_url": ad.video_url,
+            "webpage_url": ad.webpage_url,
+            "image_url": ad.image_url,
+            "duration": ad.duration,
+            "reward_coins": str(ad.reward_coins),  # 转换为字符串避免Decimal序列化问题
+            "daily_limit": ad.daily_limit,
+            "min_watch_duration": ad.min_watch_duration,
+            "weight": ad.weight,
+            "status": 1 if is_active else 0,
+            "start_time": ad.start_time.isoformat() if ad.start_time else None,
+            "end_time": ad.end_time.isoformat() if ad.end_time else None,
+            "created_time": ad.created_time.isoformat() if ad.created_time else None,
+            "updated_time": ad.updated_time.isoformat() if ad.updated_time else None
+        }
+        
+        return BaseResponse(
+            message="更新成功",
+            data=ad_data_dict
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logging.error(f"更新广告失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
 @router.delete("/api/ads/{ad_id}")
 async def delete_ad(ad_id: int, db: Session = Depends(get_db)):

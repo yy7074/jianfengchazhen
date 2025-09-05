@@ -1,0 +1,17 @@
+[Unit]
+Description=见缝插针游戏后端服务
+After=network.target
+
+[Service]
+Type=simple
+User=yy
+WorkingDirectory=/Users/yy/Documents/GitHub/jianfengchazhen/backend
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 start.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
