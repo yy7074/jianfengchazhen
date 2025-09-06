@@ -42,7 +42,7 @@ class User(Base):
     coins = Column(DECIMAL(10, 2), default=0, comment="金币余额")
     total_coins = Column(DECIMAL(10, 2), default=0, comment="历史总金币")
     level = Column(Integer, default=1, comment="用户等级")
-    experience = Column(Integer, default=0, comment="经验值")
+    experience = Column(Integer, default=0, comment="用户经验值")
     game_count = Column(Integer, default=0, comment="游戏次数")
     best_score = Column(Integer, default=0, comment="最高分")
     last_login_time = Column(DateTime, comment="最后登录时间")
@@ -170,6 +170,27 @@ class GameRecord(Base):
     __table_args__ = (
         Index('idx_user_score', 'user_id', 'score'),
         Index('idx_score_time', 'score', 'play_time'),
+    )
+
+class UserLevelConfig(Base):
+    __tablename__ = "user_level_configs"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    level = Column(Integer, unique=True, nullable=False, comment="用户等级")
+    level_name = Column(String(50), nullable=False, comment="等级名称")
+    ad_coin_multiplier = Column(DECIMAL(3, 2), default=1.00, comment="广告金币倍数")
+    game_coin_multiplier = Column(DECIMAL(3, 2), default=1.00, comment="游戏金币倍数")
+    min_experience = Column(Integer, default=0, comment="该等级所需最小经验值")
+    max_experience = Column(Integer, comment="该等级最大经验值（null表示无上限）")
+    description = Column(Text, comment="等级描述")
+    is_active = Column(Integer, default=1, comment="是否启用：1启用，0禁用")
+    created_time = Column(DateTime, default=func.now())
+    updated_time = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 索引
+    __table_args__ = (
+        Index('idx_level', 'level'),
+        Index('idx_experience_range', 'min_experience', 'max_experience'),
     )
 
 class Admin(Base):

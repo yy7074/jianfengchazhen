@@ -90,6 +90,11 @@ async def startup_event():
         # 初始化默认广告
         AdService.init_default_ads(db)
         print("✅ 默认广告初始化完成")
+        
+        # 初始化默认等级配置
+        from services.level_service import LevelService
+        LevelService.init_default_levels(db)
+        print("✅ 默认等级配置初始化完成")
     except Exception as e:
         print(f"❌ 初始化失败: {e}")
     finally:

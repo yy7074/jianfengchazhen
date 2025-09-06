@@ -91,6 +91,17 @@ async def withdraw_management_page(request: Request):
         "request": request
     })
 
+# 等级管理页面
+@router.get("/levels", response_class=HTMLResponse)
+async def level_management_page(request: Request):
+    """等级管理页面"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    return templates.TemplateResponse("admin/level_management.html", {
+        "request": request
+    })
+
 # API接口
 @router.get("/api/stats")
 async def get_admin_stats(db: Session = Depends(get_db)):
@@ -205,6 +216,121 @@ async def get_users_list(
             "size": size,
             "pages": (total + size - 1) // size
         }
+    )
+
+# 用户等级管理
+@router.get("/api/levels")
+async def get_level_configs(db: Session = Depends(get_db)):
+    """获取所有等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    levels = LevelService.get_all_level_configs(db)
+    
+    levels_data = []
+    for level in levels:
+        level_data = {
+            "id": level.id,
+            "level": level.level,
+            "level_name": level.level_name,
+            "ad_coin_multiplier": float(level.ad_coin_multiplier),
+            "game_coin_multiplier": float(level.game_coin_multiplier),
+            "min_experience": level.min_experience,
+            "max_experience": level.max_experience,
+            "description": level.description,
+            "is_active": level.is_active,
+            "created_time": level.created_time.isoformat() if level.created_time else None,
+            "updated_time": level.updated_time.isoformat() if level.updated_time else None
+        }
+        levels_data.append(level_data)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=levels_data
+    )
+
+@router.post("/api/levels")
+async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+    """创建等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    from models import UserLevelConfig
+    
+    # 检查等级是否已存在
+    existing_level = db.query(UserLevelConfig).filter(UserLevelConfig.level == level_data.level).first()
+    if existing_level:
+        raise HTTPException(status_code=400, detail="该等级已存在")
+    
+    level_config = LevelService.create_level_config(db, level_data)
+    return BaseResponse(
+        message="创建成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.put("/api/levels/{level_id}")
+async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+    """更新等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    level_config = LevelService.update_level_config(db, level_id, level_data)
+    if not level_config:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(
+        message="更新成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.delete("/api/levels/{level_id}")
+async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+    """删除等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    success = LevelService.delete_level_config(db, level_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(message="删除成功")
+
+@router.get("/api/level-stats")
+async def get_level_stats(db: Session = Depends(get_db)):
+    """获取等级统计信息"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    stats = LevelService.get_level_stats(db)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=stats
     )
 
 # 用户编辑
@@ -392,6 +518,121 @@ async def upload_video(file: UploadFile = File(...)):
         }
     )
 
+# 用户等级管理
+@router.get("/api/levels")
+async def get_level_configs(db: Session = Depends(get_db)):
+    """获取所有等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    levels = LevelService.get_all_level_configs(db)
+    
+    levels_data = []
+    for level in levels:
+        level_data = {
+            "id": level.id,
+            "level": level.level,
+            "level_name": level.level_name,
+            "ad_coin_multiplier": float(level.ad_coin_multiplier),
+            "game_coin_multiplier": float(level.game_coin_multiplier),
+            "min_experience": level.min_experience,
+            "max_experience": level.max_experience,
+            "description": level.description,
+            "is_active": level.is_active,
+            "created_time": level.created_time.isoformat() if level.created_time else None,
+            "updated_time": level.updated_time.isoformat() if level.updated_time else None
+        }
+        levels_data.append(level_data)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=levels_data
+    )
+
+@router.post("/api/levels")
+async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+    """创建等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    from models import UserLevelConfig
+    
+    # 检查等级是否已存在
+    existing_level = db.query(UserLevelConfig).filter(UserLevelConfig.level == level_data.level).first()
+    if existing_level:
+        raise HTTPException(status_code=400, detail="该等级已存在")
+    
+    level_config = LevelService.create_level_config(db, level_data)
+    return BaseResponse(
+        message="创建成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.put("/api/levels/{level_id}")
+async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+    """更新等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    level_config = LevelService.update_level_config(db, level_id, level_data)
+    if not level_config:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(
+        message="更新成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.delete("/api/levels/{level_id}")
+async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+    """删除等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    success = LevelService.delete_level_config(db, level_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(message="删除成功")
+
+@router.get("/api/level-stats")
+async def get_level_stats(db: Session = Depends(get_db)):
+    """获取等级统计信息"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    stats = LevelService.get_level_stats(db)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=stats
+    )
+
 # 系统配置
 @router.get("/api/configs")
 async def get_system_configs(db: Session = Depends(get_db)):
@@ -532,6 +773,121 @@ async def get_withdraw_requests(
                 "current_page_count": len(items)
             }
         }
+    )
+
+# 用户等级管理
+@router.get("/api/levels")
+async def get_level_configs(db: Session = Depends(get_db)):
+    """获取所有等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    levels = LevelService.get_all_level_configs(db)
+    
+    levels_data = []
+    for level in levels:
+        level_data = {
+            "id": level.id,
+            "level": level.level,
+            "level_name": level.level_name,
+            "ad_coin_multiplier": float(level.ad_coin_multiplier),
+            "game_coin_multiplier": float(level.game_coin_multiplier),
+            "min_experience": level.min_experience,
+            "max_experience": level.max_experience,
+            "description": level.description,
+            "is_active": level.is_active,
+            "created_time": level.created_time.isoformat() if level.created_time else None,
+            "updated_time": level.updated_time.isoformat() if level.updated_time else None
+        }
+        levels_data.append(level_data)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=levels_data
+    )
+
+@router.post("/api/levels")
+async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+    """创建等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    from models import UserLevelConfig
+    
+    # 检查等级是否已存在
+    existing_level = db.query(UserLevelConfig).filter(UserLevelConfig.level == level_data.level).first()
+    if existing_level:
+        raise HTTPException(status_code=400, detail="该等级已存在")
+    
+    level_config = LevelService.create_level_config(db, level_data)
+    return BaseResponse(
+        message="创建成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.put("/api/levels/{level_id}")
+async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+    """更新等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    level_config = LevelService.update_level_config(db, level_id, level_data)
+    if not level_config:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(
+        message="更新成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.delete("/api/levels/{level_id}")
+async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+    """删除等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    success = LevelService.delete_level_config(db, level_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(message="删除成功")
+
+@router.get("/api/level-stats")
+async def get_level_stats(db: Session = Depends(get_db)):
+    """获取等级统计信息"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    stats = LevelService.get_level_stats(db)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=stats
     )
 
 @router.get("/api/withdraws/{withdraw_id}")
@@ -714,6 +1070,121 @@ async def batch_approve_withdraws(
         }
     )
 
+# 用户等级管理
+@router.get("/api/levels")
+async def get_level_configs(db: Session = Depends(get_db)):
+    """获取所有等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    levels = LevelService.get_all_level_configs(db)
+    
+    levels_data = []
+    for level in levels:
+        level_data = {
+            "id": level.id,
+            "level": level.level,
+            "level_name": level.level_name,
+            "ad_coin_multiplier": float(level.ad_coin_multiplier),
+            "game_coin_multiplier": float(level.game_coin_multiplier),
+            "min_experience": level.min_experience,
+            "max_experience": level.max_experience,
+            "description": level.description,
+            "is_active": level.is_active,
+            "created_time": level.created_time.isoformat() if level.created_time else None,
+            "updated_time": level.updated_time.isoformat() if level.updated_time else None
+        }
+        levels_data.append(level_data)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=levels_data
+    )
+
+@router.post("/api/levels")
+async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+    """创建等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    from models import UserLevelConfig
+    
+    # 检查等级是否已存在
+    existing_level = db.query(UserLevelConfig).filter(UserLevelConfig.level == level_data.level).first()
+    if existing_level:
+        raise HTTPException(status_code=400, detail="该等级已存在")
+    
+    level_config = LevelService.create_level_config(db, level_data)
+    return BaseResponse(
+        message="创建成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.put("/api/levels/{level_id}")
+async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+    """更新等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    level_config = LevelService.update_level_config(db, level_id, level_data)
+    if not level_config:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(
+        message="更新成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.delete("/api/levels/{level_id}")
+async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+    """删除等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    success = LevelService.delete_level_config(db, level_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(message="删除成功")
+
+@router.get("/api/level-stats")
+async def get_level_stats(db: Session = Depends(get_db)):
+    """获取等级统计信息"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    stats = LevelService.get_level_stats(db)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=stats
+    )
+
 @router.post("/api/withdraws/batch-reject")
 async def batch_reject_withdraws(
     request_data: dict,
@@ -751,4 +1222,119 @@ async def batch_reject_withdraws(
             "failed_count": len(failed_items),
             "failed_items": failed_items
         }
+    )
+
+# 用户等级管理
+@router.get("/api/levels")
+async def get_level_configs(db: Session = Depends(get_db)):
+    """获取所有等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    levels = LevelService.get_all_level_configs(db)
+    
+    levels_data = []
+    for level in levels:
+        level_data = {
+            "id": level.id,
+            "level": level.level,
+            "level_name": level.level_name,
+            "ad_coin_multiplier": float(level.ad_coin_multiplier),
+            "game_coin_multiplier": float(level.game_coin_multiplier),
+            "min_experience": level.min_experience,
+            "max_experience": level.max_experience,
+            "description": level.description,
+            "is_active": level.is_active,
+            "created_time": level.created_time.isoformat() if level.created_time else None,
+            "updated_time": level.updated_time.isoformat() if level.updated_time else None
+        }
+        levels_data.append(level_data)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=levels_data
+    )
+
+@router.post("/api/levels")
+async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+    """创建等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    from models import UserLevelConfig
+    
+    # 检查等级是否已存在
+    existing_level = db.query(UserLevelConfig).filter(UserLevelConfig.level == level_data.level).first()
+    if existing_level:
+        raise HTTPException(status_code=400, detail="该等级已存在")
+    
+    level_config = LevelService.create_level_config(db, level_data)
+    return BaseResponse(
+        message="创建成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.put("/api/levels/{level_id}")
+async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+    """更新等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    level_config = LevelService.update_level_config(db, level_id, level_data)
+    if not level_config:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(
+        message="更新成功",
+        data={
+            "id": level_config.id,
+            "level": level_config.level,
+            "level_name": level_config.level_name,
+            "ad_coin_multiplier": float(level_config.ad_coin_multiplier),
+            "game_coin_multiplier": float(level_config.game_coin_multiplier),
+            "min_experience": level_config.min_experience,
+            "max_experience": level_config.max_experience,
+            "description": level_config.description,
+            "is_active": level_config.is_active
+        }
+    )
+
+@router.delete("/api/levels/{level_id}")
+async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+    """删除等级配置"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    success = LevelService.delete_level_config(db, level_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="等级配置不存在")
+    
+    return BaseResponse(message="删除成功")
+
+@router.get("/api/level-stats")
+async def get_level_stats(db: Session = Depends(get_db)):
+    """获取等级统计信息"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    from services.level_service import LevelService
+    stats = LevelService.get_level_stats(db)
+    
+    return BaseResponse(
+        message="获取成功",
+        data=stats
     ) 

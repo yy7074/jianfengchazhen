@@ -78,12 +78,20 @@ class AdService:
         if is_completed:
             # 如果广告本身设置了奖励金币，优先使用广告设置
             if ad.reward_coins > 0:
-                reward_coins = ad.reward_coins
+                base_reward_coins = float(ad.reward_coins)
             else:
                 # 使用系统配置的奖励范围随机生成
                 min_coins, max_coins = ConfigService.get_ad_reward_coins_range(db)
-                reward_coins = random.uniform(min_coins, max_coins)
-                reward_coins = round(reward_coins, 2)
+                base_reward_coins = random.uniform(min_coins, max_coins)
+                base_reward_coins = round(base_reward_coins, 2)
+            
+            # 根据用户等级计算最终奖励
+            from services.level_service import LevelService
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                reward_coins = LevelService.calculate_ad_coins(db, user.level, base_reward_coins)
+            else:
+                reward_coins = base_reward_coins
         else:
             reward_coins = 0
         

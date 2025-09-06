@@ -761,6 +761,10 @@
                 <span class="menu-icon">💸</span>
                 提现审核
             </div>
+            <div class="menu-item" onclick="showPage('levels')">
+                <span class="menu-icon">🏆</span>
+                等级管理
+            </div>
             <div class="menu-item" onclick="showPage('settings')">
                 <span class="menu-icon">⚙️</span>
                 系统配置
@@ -1066,6 +1070,77 @@
                     <!-- 分页 -->
                     <div id="withdrawPagination" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;"></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 等级管理页面 -->
+        <div id="levels-page" class="page-content">
+            <div class="page-header">
+                <div class="page-title">🏆 等级管理</div>
+                <div class="page-subtitle">管理用户等级配置和金币奖励倍数</div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="window.open('/admin/levels', '_blank')">
+                        🚀 打开专用等级管理页面
+                    </button>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value" id="totalLevels">-</div>
+                    <div class="stat-label">总等级数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="totalUsersInLevels">-</div>
+                    <div class="stat-label">总用户数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-value" id="avgUserLevel">-</div>
+                    <div class="stat-label">平均等级</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🥇</div>
+                    <div class="stat-value" id="newbieUsers">-</div>
+                    <div class="stat-label">新手用户</div>
+                </div>
+            </div>
+            
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>💫 等级配置概览</h3>
+                    <div class="content-actions">
+                        <button class="btn btn-success" onclick="loadLevelStats()">
+                            🔄 刷新数据
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <div id="levelsList">
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <div>正在加载等级数据...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>📈 用户等级分布</h3>
+                </div>
+                <div id="levelDistribution">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <div>正在加载分布数据...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="page-footer">
+                <p>💡 提示：点击上方"打开专用等级管理页面"按钮可以进行详细的等级配置操作</p>
             </div>
         </div>
 
@@ -2461,10 +2536,185 @@
                 if (pageId === 'withdraws') {
                     loadWithdrawRequests();
                 }
+                
+                // 如果是等级管理页面，加载数据
+                if (pageId === 'levels') {
+                    loadLevelStats();
+                }
             }
             
             // 设置对应菜单项为active
             event.target.classList.add('active');
+        }
+
+        // 等级管理相关函数
+        async function loadLevelStats() {
+            try {
+                // 加载等级统计数据
+                const statsResponse = await fetch('/admin/api/level-stats');
+                const statsResult = await statsResponse.json();
+                
+                if (statsResult.data) {
+                    const stats = statsResult.data;
+                    const totalUsers = stats.total_users || 0;
+                    const totalLevels = stats.total_levels || 0;
+                    const distribution = stats.level_distribution || {};
+                    
+                    // 计算平均等级
+                    let totalUserLevels = 0;
+                    let userCount = 0;
+                    for (const [level, count] of Object.entries(distribution)) {
+                        totalUserLevels += parseInt(level) * parseInt(count);
+                        userCount += parseInt(count);
+                    }
+                    const avgLevel = userCount > 0 ? (totalUserLevels / userCount).toFixed(1) : 0;
+                    
+                    // 更新统计卡片
+                    document.getElementById('totalLevels').textContent = totalLevels;
+                    document.getElementById('totalUsersInLevels').textContent = totalUsers;
+                    document.getElementById('avgUserLevel').textContent = avgLevel;
+                    document.getElementById('newbieUsers').textContent = distribution[1] || 0;
+                    
+                    // 渲染等级分布
+                    renderLevelDistribution(distribution);
+                }
+                
+                // 加载等级配置列表
+                const levelsResponse = await fetch('/admin/api/levels');
+                const levelsResult = await levelsResponse.json();
+                
+                if (levelsResult.data) {
+                    renderLevelsList(levelsResult.data);
+                }
+                
+            } catch (error) {
+                console.error('加载等级数据失败:', error);
+                document.getElementById('levelsList').innerHTML = 
+                    '<div class="error-state">❌ 加载等级数据失败，请刷新重试</div>';
+            }
+        }
+
+        function renderLevelsList(levels) {
+            const container = document.getElementById('levelsList');
+            
+            if (!levels || levels.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无等级配置</div>';
+                return;
+            }
+            
+            const tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>等级</th>
+                            <th>名称</th>
+                            <th>广告倍数</th>
+                            <th>游戏倍数</th>
+                            <th>经验范围</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${levels.map(level => {
+                            const levelBadgeClass = `level-badge level-${level.level}`;
+                            const statusColor = level.is_active ? '#2ecc71' : '#e74c3c';
+                            const statusText = level.is_active ? '启用' : '禁用';
+                            
+                            return `
+                                <tr>
+                                    <td>
+                                        <span class="${levelBadgeClass}" style="
+                                            display: inline-block;
+                                            padding: 4px 8px;
+                                            border-radius: 12px;
+                                            font-size: 12px;
+                                            font-weight: bold;
+                                            color: white;
+                                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                            min-width: 45px;
+                                            text-align: center;
+                                        ">
+                                            Lv.${level.level}
+                                        </span>
+                                    </td>
+                                    <td><strong>${level.level_name}</strong></td>
+                                    <td><span style="color: #667eea; font-weight: bold;">×${level.ad_coin_multiplier}</span></td>
+                                    <td><span style="color: #667eea; font-weight: bold;">×${level.game_coin_multiplier}</span></td>
+                                    <td style="font-size: 0.9em; color: #666;">
+                                        ${level.min_experience} - ${level.max_experience || '∞'}
+                                    </td>
+                                    <td>
+                                        <span style="color: ${statusColor}; font-weight: 500;">
+                                            ${statusText}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+
+        function renderLevelDistribution(distribution) {
+            const container = document.getElementById('levelDistribution');
+            
+            if (!distribution || Object.keys(distribution).length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无用户等级分布数据</div>';
+                return;
+            }
+            
+            // 创建分布图表
+            const distributionHTML = Object.entries(distribution)
+                .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                .map(([level, count]) => {
+                    const percentage = Math.max(5, (count / Math.max(...Object.values(distribution))) * 100);
+                    return `
+                        <div class="distribution-item" style="
+                            display: flex;
+                            align-items: center;
+                            margin-bottom: 12px;
+                            padding: 8px;
+                            background: #f8f9fa;
+                            border-radius: 6px;
+                        ">
+                            <div style="
+                                min-width: 60px;
+                                font-weight: bold;
+                                color: #333;
+                            ">等级 ${level}</div>
+                            <div style="
+                                flex: 1;
+                                margin: 0 15px;
+                                background: #e9ecef;
+                                border-radius: 10px;
+                                overflow: hidden;
+                                height: 20px;
+                            ">
+                                <div style="
+                                    width: ${percentage}%;
+                                    height: 100%;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    transition: width 0.3s ease;
+                                "></div>
+                            </div>
+                            <div style="
+                                min-width: 50px;
+                                text-align: right;
+                                font-weight: bold;
+                                color: #667eea;
+                            ">${count}人</div>
+                        </div>
+                    `;
+                }).join('');
+            
+            container.innerHTML = `
+                <div style="padding: 20px;">
+                    ${distributionHTML}
+                </div>
+            `;
         }
     </script>
 </body>

@@ -11,7 +11,8 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     
     // 后端服务器地址 - 通过内网穿透访问
-    private const val BASE_URL = "http://139.129.23.105:3003/"
+    private const val BASE_URL = "http://139.129.23.105:30dan
+    /"
     
     private var apiService: ApiService? = null
     
@@ -24,7 +25,7 @@ object RetrofitClient {
     
     private fun createRetrofit(): Retrofit {
         // 创建日志拦截器
-        val loggingInterceptor = HttpLoggingInterceptor { message ->
+        val loggingInterceptor = HttpLoggingInterceptor { message ->就；
             Log.d("NetworkAPI", message)
         }.apply {
             level = HttpLoggingInterceptor.Level.BODY
