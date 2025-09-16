@@ -8,7 +8,7 @@ import json
 import random
 
 # 服务器配置
-BASE_URL = "http://localhost:3001"
+BASE_URL = "http://8089.dachaonet.com"
 
 def test_ad_system():
     """测试广告系统功能"""
@@ -79,7 +79,7 @@ def test_ad_system():
     print("3. 测试广告观看完成:")
     
     watch_data = {
-        "ad_id": selected_ad_id,
+        "ad_id": str(selected_ad_id),  # 转换为字符串
         "watch_duration": 30,  # 观看30秒
         "is_completed": True   # 标记为完成
     }
@@ -136,7 +136,7 @@ def test_ad_system():
                     
                     # 模拟观看
                     watch_data = {
-                        "ad_id": ad['id'],
+                        "ad_id": str(ad['id']),  # 转换为字符串
                         "watch_duration": ad['duration'],
                         "is_completed": True
                     }
@@ -179,7 +179,7 @@ def test_ad_system():
                     
                     # 观看广告
                     watch_data = {
-                        "ad_id": ad['id'],
+                        "ad_id": str(ad['id']),  # 转换为字符串
                         "watch_duration": ad['duration'],
                         "is_completed": True
                     }
