@@ -61,7 +61,7 @@ class AdConfig(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False, comment="广告名称")
     ad_type = Column(String(20), default="video", comment="广告类型：video=视频广告, webpage=网页广告")
-    video_url = Column(String(500), comment="视频文件URL（视频广告用）")
+    video_url = Column(String(1000), comment="视频文件URL（视频广告用）")
     webpage_url = Column(String(500), comment="网页跳转URL（网页广告用）")
     image_url = Column(String(500), comment="广告图片URL")
     duration = Column(Integer, nullable=False, comment="展示时长（秒）")

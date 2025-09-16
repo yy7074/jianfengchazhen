@@ -45,7 +45,7 @@ class UserUpdate(BaseModel):
 class AdConfigCreate(BaseModel):
     name: str = Field(..., max_length=100)
     ad_type: str = Field(default="video", pattern="^(video|webpage)$")
-    video_url: Optional[str] = Field(None, max_length=500)
+    video_url: Optional[str] = Field(None, max_length=1000)
     webpage_url: Optional[str] = Field(None, max_length=500) 
     image_url: Optional[str] = Field(None, max_length=500)
     duration: int = Field(..., gt=0)
@@ -59,7 +59,7 @@ class AdConfigCreate(BaseModel):
 class AdConfigUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
     ad_type: Optional[str] = Field(None, pattern="^(video|webpage)$")
-    video_url: Optional[str] = Field(None, max_length=500)
+    video_url: Optional[str] = Field(None, max_length=1000)
     webpage_url: Optional[str] = Field(None, max_length=500)
     image_url: Optional[str] = Field(None, max_length=500)
     duration: Optional[int] = Field(None, gt=0)
