@@ -207,3 +207,4 @@ class LevelService:
             "total_levels": db.query(UserLevelConfig).filter(UserLevelConfig.is_active == 1).count(),
             "total_users": db.query(User).count()
         }
+
