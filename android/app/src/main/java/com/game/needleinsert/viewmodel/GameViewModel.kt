@@ -8,6 +8,7 @@ import com.game.needleinsert.model.*
 import com.game.needleinsert.utils.AdManager
 import com.game.needleinsert.utils.SoundManager
 import com.game.needleinsert.utils.UserManager
+import com.game.needleinsert.network.RetrofitClient
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.*
@@ -346,7 +347,10 @@ class GameViewModel : ViewModel() {
     // 重新开始游戏 - 现在需要先观看广告
     fun restartGame() {
         // 设置重启所需的广告状态
-        gameData = gameData.copy(adState = AdState.RESTART_REQUIRED)
+        gameData = gameData.copy(
+            adState = AdState.RESTART_REQUIRED,
+            isRestartAd = true
+        )
         // 请求广告
         requestRestartAd()
     }
@@ -357,12 +361,15 @@ class GameViewModel : ViewModel() {
         
         viewModelScope.launch {
             try {
-                val response = apiService.getRandomAd(UserManager.getCurrentUserId() ?: "0")
+                val response = RetrofitClient.getApiService().getRandomAdForUser(UserManager.getCurrentUser()?.id ?: "0")
                 if (response.isSuccessful && response.body()?.code == 200) {
                     val ad = response.body()?.data
                     if (ad != null) {
                         currentAd = ad
-                        gameData = gameData.copy(adState = AdState.READY)
+                        gameData = gameData.copy(
+                            adState = AdState.READY,
+                            isRestartAd = true  // 保持重启广告标志
+                        )
                     } else {
                         // 没有广告可播放，直接重新开始游戏
                         proceedWithRestart()
@@ -462,8 +469,7 @@ class GameViewModel : ViewModel() {
     // 重置广告状态（用于全屏广告）
     fun resetAdState() {
         // 检查是否是重启广告
-        val wasRestartAd = gameData.adState == AdState.READY && 
-                          (gameData.state == GameState.GAME_OVER || gameData.state == GameState.PAUSED)
+        val wasRestartAd = gameData.isRestartAd
         
         // 刷新用户金币（从本地存储获取最新值）
         val currentUser = UserManager.getCurrentUser()
@@ -477,11 +483,13 @@ class GameViewModel : ViewModel() {
         gameData = gameData.copy(
             coins = latestCoins,
             adState = AdState.NONE,
-            canShowAd = false
+            canShowAd = false,
+            isRestartAd = false  // 重置重启广告标志
         )
         
         // 如果是重启广告，观看完成后执行游戏重启
         if (wasRestartAd) {
+            Log.d("GameViewModel", "重启广告观看完成，开始重启游戏")
             onRestartAdCompleted()
             return
         }
@@ -563,7 +571,8 @@ class GameViewModel : ViewModel() {
         currentAd = null
         gameData = gameData.copy(
             adState = AdState.NONE,
-            canShowAd = false
+            canShowAd = false,
+            isRestartAd = false  // 重置重启广告标志
         )
     }
     

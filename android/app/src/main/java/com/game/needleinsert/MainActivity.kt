@@ -39,6 +39,7 @@ import android.app.Activity
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.game.needleinsert.utils.UserManager
+import com.game.needleinsert.utils.AppTimeLimitManager
 import com.game.needleinsert.viewmodel.UserViewModel
 import com.game.needleinsert.model.User
 import kotlinx.coroutines.launch
@@ -47,20 +48,31 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.lifecycle.lifecycleScope
+import com.game.needleinsert.ui.TimeLimitDialog
+import com.game.needleinsert.config.AppConfig
+import android.net.Uri
+import android.util.Log
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // 初始化用户管理器
+        // 初始化用户管理器和时间限制管理器
         UserManager.init(this)
+        AppTimeLimitManager.init(this)
         
         setContent {
             NeedleInsertTheme {
                 MainNavigation()
             }
         }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // 每次应用恢复时检查时间限制
+        // 时间限制检查已移至MainNavigation中的LaunchedEffect
     }
 }
 
@@ -71,6 +83,42 @@ fun MainNavigation() {
     val userViewModel: UserViewModel = viewModel()
     val userState by userViewModel.uiState.collectAsState()
     var currentScreen by remember { mutableStateOf("login") }
+    
+    // 时间限制状态管理
+    var showTimeLimitDialog by remember { mutableStateOf(false) }
+    
+    // 检查时间限制 - 持续监控
+    LaunchedEffect(Unit) {
+        // 初始化时间限制管理器（不清除数据，保持持久化）
+        AppTimeLimitManager.init(context)
+        
+        // 首次启动时输出详细信息
+        Log.d("TimeLimitCheck", "=== 时间限制检查开始 ===")
+        Log.d("TimeLimitCheck", AppTimeLimitManager.getInstallTimeInfo())
+        Log.d("TimeLimitCheck", "时间限制启用: ${AppTimeLimitManager.isTimeLimitEnabled()}")
+        Log.d("TimeLimitCheck", "开始持续监控...")
+        
+        // 持续检查时间限制
+        while (true) {
+            val isExceeded = AppTimeLimitManager.isTimeLimitExceeded()
+            val remainingTime = AppTimeLimitManager.getRemainingTimeSeconds()
+            
+            // 只在剩余时间较少时输出日志
+            if (remainingTime <= 10) {
+                Log.d("TimeLimitCheck", "剩余时间: ${remainingTime}秒")
+            }
+            
+            if (isExceeded) {
+                Log.d("TimeLimitCheck", "时间已到期，显示限制弹窗")
+                showTimeLimitDialog = true
+                break // 显示弹窗后停止检查
+            }
+            
+            // 每秒检查一次
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    
     
     // 启动时自动登录
     LaunchedEffect(Unit) {
@@ -91,6 +139,39 @@ fun MainNavigation() {
         if (userState.user != null) {
             currentScreen = "menu"
         }
+    }
+    
+    // 显示时间限制弹窗
+    if (showTimeLimitDialog) {
+        TimeLimitDialog(
+            onContactDeveloper = {
+                // 打开联系开发者的方式（邮件）
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("mailto:${AppConfig.TimeLimits.DEVELOPER_EMAIL}?subject=应用授权咨询&body=您好，我希望获取应用的完整版本授权。")
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // 如果没有邮件应用，尝试其他方式
+                    val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf(AppConfig.TimeLimits.DEVELOPER_EMAIL))
+                        putExtra(Intent.EXTRA_SUBJECT, "应用授权咨询")
+                        putExtra(Intent.EXTRA_TEXT, "您好，我希望获取应用的完整版本授权。")
+                    }
+                    try {
+                        context.startActivity(Intent.createChooser(fallbackIntent, "选择邮件应用"))
+                    } catch (e2: Exception) {
+                        // 最后的备选方案：可以显示一个Toast或对话框显示联系方式
+                    }
+                }
+            },
+            onExit = {
+                // 退出应用
+                (context as? ComponentActivity)?.finish()
+            }
+        )
+        return // 如果显示时间限制弹窗，不显示其他内容
     }
     
     when (currentScreen) {

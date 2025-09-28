@@ -72,7 +72,8 @@ data class GameData(
     val isReversed: Boolean = false,  // 是否反向旋转
     val coins: Int = 0,  // 用户金币
     val canShowAd: Boolean = false,  // 是否可以显示广告
-    val adState: AdState = AdState.NONE  // 广告状态
+    val adState: AdState = AdState.NONE,  // 广告状态
+    val isRestartAd: Boolean = false  // 是否是重启广告
 )
 
 // API相关模型
@@ -121,7 +122,7 @@ data class AdConfig(
     @SerializedName("weight") val weight: Int = 1, // 权重，用于随机选择
     @SerializedName("daily_limit") val dailyLimit: Int = 10, // 每日展示限制
     @SerializedName("click_url") val clickUrl: String = "", // 点击跳转链接
-    @SerializedName("advertiser") val advertiser: String = "" // 广告主
+    @SerializedName("advertiser") val advertiser: String? = null // 广告主
 ) : Serializable
 
 data class AdWatchRequest(
