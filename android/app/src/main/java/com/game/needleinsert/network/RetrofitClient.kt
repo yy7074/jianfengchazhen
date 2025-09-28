@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     
-    // 后端服务器地址 - 通过内网穿透访问
-    private const val BASE_URL = "http://8089.dachaonet.com/"
+    // 后端服务器地址 - 正式服务器
+    private const val BASE_URL = "http://8.137.103.175:3001/"
     
     private var apiService: ApiService? = null
     

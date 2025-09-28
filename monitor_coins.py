@@ -9,7 +9,7 @@ import json
 def get_user_coins(user_id=9):
     """获取用户当前金币"""
     try:
-        response = requests.get(f"http://8089.dachaonet.com/api/user/{user_id}/stats")
+        response = requests.get(f"http://8.137.103.175:3001/api/user/{user_id}/stats")
         if response.status_code == 200:
             data = response.json()
             return data['data']['current_coins']

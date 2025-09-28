@@ -8,7 +8,7 @@ import json
 import random
 
 # 服务器配置
-BASE_URL = "http://8089.dachaonet.com"
+BASE_URL = "http://8.137.103.175:3001"
 
 def test_ad_system():
     """测试广告系统功能"""

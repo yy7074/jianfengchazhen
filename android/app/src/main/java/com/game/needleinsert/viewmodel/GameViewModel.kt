@@ -343,8 +343,43 @@ class GameViewModel : ViewModel() {
         currentNeedle = null
     }
     
-    // 重新开始游戏
+    // 重新开始游戏 - 现在需要先观看广告
     fun restartGame() {
+        // 设置重启所需的广告状态
+        gameData = gameData.copy(adState = AdState.RESTART_REQUIRED)
+        // 请求广告
+        requestRestartAd()
+    }
+    
+    // 请求重启游戏前的广告
+    private fun requestRestartAd() {
+        gameData = gameData.copy(adState = AdState.LOADING)
+        
+        viewModelScope.launch {
+            try {
+                val response = apiService.getRandomAd(UserManager.getCurrentUserId() ?: "0")
+                if (response.isSuccessful && response.body()?.code == 200) {
+                    val ad = response.body()?.data
+                    if (ad != null) {
+                        currentAd = ad
+                        gameData = gameData.copy(adState = AdState.READY)
+                    } else {
+                        // 没有广告可播放，直接重新开始游戏
+                        proceedWithRestart()
+                    }
+                } else {
+                    // 广告加载失败，直接重新开始游戏
+                    proceedWithRestart()
+                }
+            } catch (e: Exception) {
+                // 网络错误，直接重新开始游戏
+                proceedWithRestart()
+            }
+        }
+    }
+    
+    // 执行实际的游戏重启
+    private fun proceedWithRestart() {
         val currentLevel = gameData.level // 保存当前关卡
         val currentCoins = gameData.coins // 保存当前金币
         gameData = GameData(
@@ -355,6 +390,11 @@ class GameViewModel : ViewModel() {
         diskRotation = 0f
         isNeedleLaunching = false
         startNewGame()
+    }
+    
+    // 观看重启广告完成后的回调
+    fun onRestartAdCompleted() {
+        proceedWithRestart()
     }
     
     // 暂停/恢复游戏
@@ -421,12 +461,16 @@ class GameViewModel : ViewModel() {
     
     // 重置广告状态（用于全屏广告）
     fun resetAdState() {
+        // 检查是否是重启广告
+        val wasRestartAd = gameData.adState == AdState.READY && 
+                          (gameData.state == GameState.GAME_OVER || gameData.state == GameState.PAUSED)
+        
         // 刷新用户金币（从本地存储获取最新值）
         val currentUser = UserManager.getCurrentUser()
         val oldCoins = gameData.coins
         val latestCoins = currentUser?.coins ?: gameData.coins
         
-        Log.d("GameViewModel", "重置广告状态，刷新金币: $oldCoins -> $latestCoins")
+        Log.d("GameViewModel", "重置广告状态，刷新金币: $oldCoins -> $latestCoins, 是否重启广告: $wasRestartAd")
         
         // 更新金币并检查是否有增加
         val coinDiff = latestCoins - oldCoins
@@ -435,6 +479,12 @@ class GameViewModel : ViewModel() {
             adState = AdState.NONE,
             canShowAd = false
         )
+        
+        // 如果是重启广告，观看完成后执行游戏重启
+        if (wasRestartAd) {
+            onRestartAdCompleted()
+            return
+        }
         
         // 如果金币增加了，显示奖励提示
         if (coinDiff > 0) {

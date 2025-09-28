@@ -156,11 +156,18 @@ fun GameScreen(
                 }
             }
             
+            // 检查是否是重启广告
+            val isRestartAd = viewModel.gameData.state == GameState.GAME_OVER || viewModel.gameData.state == GameState.PAUSED
+            
             AlertDialog(
-                onDismissRequest = { viewModel.cancelAdWatch() },
+                onDismissRequest = { 
+                    if (!isRestartAd) {
+                        viewModel.cancelAdWatch() 
+                    }
+                },
                 title = {
                     Text(
-                        text = "🎬 开始观看广告",
+                        text = if (isRestartAd) "🚀 重新开始游戏" else "🎬 观看广告",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -169,7 +176,10 @@ fun GameScreen(
                     viewModel.currentAd?.let { ad ->
                         Column {
                             Text(
-                                text = "即将全屏播放广告视频",
+                                text = if (isRestartAd) 
+                                    "重新开始游戏需要观看广告" 
+                                else 
+                                    "即将全屏播放广告视频",
                                 fontSize = 16.sp
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -179,6 +189,14 @@ fun GameScreen(
                                 color = Color(0xFFFFD700),
                                 fontWeight = FontWeight.Bold
                             )
+                            if (isRestartAd) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "观看完成后游戏将自动重新开始",
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF888888)
+                                )
+                            }
                         }
                     }
                 },
@@ -199,12 +217,14 @@ fun GameScreen(
                             containerColor = Color(0xFF4CAF50)
                         )
                     ) {
-                        Text("开始观看")
+                        Text(if (isRestartAd) "观看广告并重新开始" else "开始观看")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { viewModel.cancelAdWatch() }) {
-                        Text("取消")
+                    if (!isRestartAd) {
+                        TextButton(onClick = { viewModel.cancelAdWatch() }) {
+                            Text("取消")
+                        }
                     }
                 }
             )

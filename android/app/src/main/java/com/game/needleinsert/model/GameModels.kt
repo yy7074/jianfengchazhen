@@ -156,12 +156,13 @@ data class CoinRecord(
 
 // 广告观看状态
 enum class AdState {
-    NONE,        // 无广告
-    LOADING,     // 加载中
-    READY,       // 准备播放
-    PLAYING,     // 播放中
-    COMPLETED,   // 播放完成
-    FAILED       // 播放失败
+    NONE,             // 无广告
+    LOADING,          // 加载中
+    READY,            // 准备播放
+    PLAYING,          // 播放中
+    COMPLETED,        // 播放完成
+    FAILED,           // 播放失败
+    RESTART_REQUIRED  // 重新开始游戏前需要观看广告
 }
 
 data class BaseResponse<T>(

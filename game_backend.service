@@ -1,0 +1,18 @@
+[Unit]
+Description=见缝插针游戏后端服务
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/your/project/backend
+Environment=PATH=/path/to/your/venv/bin
+ExecStart=/path/to/your/venv/bin/python start.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

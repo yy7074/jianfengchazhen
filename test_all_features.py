@@ -6,7 +6,7 @@ import requests
 import json
 import time
 
-BASE_URL = "http://8089.dachaonet.com"
+BASE_URL = "http://8.137.103.175:3001"
 USER_ID = 9
 
 def test_ad_watch():

@@ -15,7 +15,7 @@ os.environ['NO_PROXY'] = 'localhost,127.0.0.1'
 
 class LeaderboardIntegrationTest:
     def __init__(self):
-        self.base_url = "http://8089.dachaonet.com"
+        self.base_url = "http://8.137.103.175:3001"
         self.test_results = []
         
     def log_test(self, test_name, success, message=""):
