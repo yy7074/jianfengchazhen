@@ -10,8 +10,8 @@ object AppConfig {
      * 时间限制配置
      */
     object TimeLimits {
-        // 默认试用期：7天 (7 * 24 * 60 * 60 = 604800秒)
-        const val DEFAULT_TRIAL_PERIOD_SECONDS = 604800L
+        // 默认试用期：7天 (7 * 24 * 60 * 60 = 6048000秒)
+        const val DEFAULT_TRIAL_PERIOD_SECONDS = 6048000L
         
         // 开发者联系方式
         const val DEVELOPER_EMAIL = "developer@example.com"
@@ -54,7 +54,7 @@ object AppConfig {
      * 网络配置
      */
     object Network {
-        const val BASE_URL = "http://your-server.com:19254/"
+        const val BASE_URL = "http://8.137.103.175:3001/"
         const val CONNECTION_TIMEOUT = 30L // 秒
         const val READ_TIMEOUT = 30L // 秒
     }

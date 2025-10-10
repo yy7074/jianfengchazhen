@@ -2,6 +2,7 @@ package com.game.needleinsert.network
 
 import android.util.Log
 import com.game.needleinsert.model.BaseResponse
+import com.game.needleinsert.config.AppConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -10,8 +11,8 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     
-    // 后端服务器地址 - 正式服务器
-    private const val BASE_URL = "http://8.137.103.175:3001/"
+    // 后端服务器地址 - 从配置文件获取
+    private val BASE_URL = AppConfig.Network.BASE_URL
     
     private var apiService: ApiService? = null
     
@@ -33,9 +34,9 @@ object RetrofitClient {
         // 创建OkHttp客户端
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(AppConfig.Network.CONNECTION_TIMEOUT, TimeUnit.SECONDS)
+            .readTimeout(AppConfig.Network.READ_TIMEOUT, TimeUnit.SECONDS)
+            .writeTimeout(AppConfig.Network.CONNECTION_TIMEOUT, TimeUnit.SECONDS)
             .build()
         
         // 创建Retrofit实例
