@@ -765,6 +765,10 @@
                 <span class="menu-icon">🏆</span>
                 等级管理
             </div>
+            <div class="menu-item" onclick="showPage('versions')">
+                <span class="menu-icon">🚀</span>
+                版本管理
+            </div>
             <div class="menu-item" onclick="showPage('settings')">
                 <span class="menu-icon">⚙️</span>
                 系统配置
@@ -1079,8 +1083,11 @@
                 <div class="page-title">🏆 等级管理</div>
                 <div class="page-subtitle">管理用户等级配置和金币奖励倍数</div>
                 <div style="margin-top: 15px;">
-                    <button class="btn btn-primary" onclick="window.open('/admin/levels', '_blank')">
-                        🚀 打开专用等级管理页面
+                    <button class="btn btn-primary" onclick="showAddLevelModal()">
+                        ➕ 添加等级
+                    </button>
+                    <button class="btn btn-success" onclick="loadLevelStats()">
+                        🔄 刷新数据
                     </button>
                 </div>
             </div>
@@ -1110,20 +1117,30 @@
             
             <div class="content-card">
                 <div class="content-header">
-                    <h3>💫 等级配置概览</h3>
-                    <div class="content-actions">
-                        <button class="btn btn-success" onclick="loadLevelStats()">
-                            🔄 刷新数据
-                        </button>
-                    </div>
+                    <h3>💫 等级配置列表</h3>
                 </div>
                 <div class="table-container">
-                    <div id="levelsList">
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <div>正在加载等级数据...</div>
-                        </div>
-                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>等级</th>
+                                <th>名称</th>
+                                <th>广告倍数</th>
+                                <th>游戏倍数</th>
+                                <th>经验范围</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="levelsTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 20px;">
+                                    <div class="loading-spinner"></div>
+                                    <div>正在加载等级数据...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             
@@ -1138,13 +1155,79 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="page-footer">
-                <p>💡 提示：点击上方"打开专用等级管理页面"按钮可以进行详细的等级配置操作</p>
-            </div>
         </div>
 
         <!-- 系统配置页面 -->
+        <!-- 版本管理页面 -->
+        <div id="versions-page" class="page-content">
+            <div class="page-header">
+                <div class="page-title">🚀 版本管理</div>
+                <div class="page-subtitle">管理应用版本发布和更新</div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="showAddVersionModal()">
+                        ➕ 发布新版本
+                    </button>
+                    <button class="btn btn-success" onclick="loadVersionStats()">
+                        🔄 刷新数据
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 版本统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📱</div>
+                    <div class="stat-value" id="androidVersions">-</div>
+                    <div class="stat-label">Android版本</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="activeVersions">-</div>
+                    <div class="stat-label">活跃版本</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value" id="totalVersions">-</div>
+                    <div class="stat-label">总版本数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🆕</div>
+                    <div class="stat-value" id="latestVersionCode">-</div>
+                    <div class="stat-label">最新版本号</div>
+                </div>
+            </div>
+            
+            <!-- 版本列表 -->
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>📋 版本列表</h3>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>版本名称</th>
+                                <th>版本号</th>
+                                <th>文件大小</th>
+                                <th>强制更新</th>
+                                <th>状态</th>
+                                <th>发布时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="versionsTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 20px;">
+                                    <div class="loading-spinner"></div>
+                                    <div>正在加载版本数据...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div id="settings-page" class="page-content">
             <div class="page-header">
                 <div class="page-title">系统配置</div>
@@ -2540,6 +2623,13 @@
                 // 如果是等级管理页面，加载数据
                 if (pageId === 'levels') {
                     loadLevelStats();
+                    loadLevelsList();
+                }
+                
+                // 如果是版本管理页面，加载数据
+                if (pageId === 'versions') {
+                    loadVersionStats();
+                    loadVersionsList();
                 }
             }
             
@@ -2716,6 +2806,640 @@
                 </div>
             `;
         }
+        
+        // 版本管理相关函数
+        function loadVersionStats() {
+            fetch('/api/version-stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        const stats = data.data;
+                        document.getElementById('androidVersions').textContent = stats.android_versions || 0;
+                        document.getElementById('activeVersions').textContent = stats.active_versions || 0;
+                        document.getElementById('totalVersions').textContent = stats.total_versions || 0;
+                        
+                        // 显示最新版本号
+                        if (stats.latest_android_version) {
+                            document.getElementById('latestVersionCode').textContent = stats.latest_android_version;
+                        } else {
+                            document.getElementById('latestVersionCode').textContent = '无';
+                        }
+                        
+                        // 加载版本列表
+                        loadVersionsList();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载版本统计失败:', error);
+                });
+        }
+        
+        
+        // 等级管理相关函数
+        function showAddLevelModal() {
+            document.getElementById('levelModalTitle').textContent = '添加等级';
+            document.getElementById('levelForm').reset();
+            document.getElementById('levelId').value = '';
+            document.getElementById('levelModal').style.display = 'flex';
+        }
+        
+        function showEditLevelModal(levelId) {
+            document.getElementById('levelModalTitle').textContent = '编辑等级';
+            document.getElementById('levelId').value = levelId;
+            
+            // 加载等级数据
+            fetch(`/api/levels/${levelId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        const level = data.data;
+                        document.getElementById('levelNumber').value = level.level;
+                        document.getElementById('levelName').value = level.level_name;
+                        document.getElementById('adCoinMultiplier').value = level.ad_coin_multiplier;
+                        document.getElementById('gameCoinMultiplier').value = level.game_coin_multiplier;
+                        document.getElementById('minExperience').value = level.min_experience;
+                        document.getElementById('maxExperience').value = level.max_experience || '';
+                        document.getElementById('levelDescription').value = level.description || '';
+                        document.getElementById('levelIsActive').checked = level.is_active === 1;
+                        
+                        document.getElementById('levelModal').style.display = 'flex';
+                    }
+                })
+                .catch(error => {
+                    console.error('加载等级数据失败:', error);
+                    alert('加载等级数据失败');
+                });
+        }
+        
+        function closeLevelModal() {
+            document.getElementById('levelModal').style.display = 'none';
+        }
+        
+        function saveLevelData() {
+            const levelId = document.getElementById('levelId').value;
+            const isEdit = levelId !== '';
+            
+            const levelData = {
+                level: parseInt(document.getElementById('levelNumber').value),
+                level_name: document.getElementById('levelName').value,
+                ad_coin_multiplier: parseFloat(document.getElementById('adCoinMultiplier').value),
+                game_coin_multiplier: parseFloat(document.getElementById('gameCoinMultiplier').value),
+                min_experience: parseInt(document.getElementById('minExperience').value),
+                max_experience: document.getElementById('maxExperience').value ? parseInt(document.getElementById('maxExperience').value) : null,
+                description: document.getElementById('levelDescription').value,
+                is_active: document.getElementById('levelIsActive').checked ? 1 : 0
+            };
+            
+            const url = isEdit ? `/api/levels/${levelId}` : '/api/levels';
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(levelData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert(isEdit ? '等级更新成功' : '等级添加成功');
+                    closeLevelModal();
+                    loadLevelStats();
+                    loadLevelsList();
+                } else {
+                    alert('操作失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('保存等级失败:', error);
+                alert('保存等级失败');
+            });
+        }
+        
+        function deleteLevelData(levelId) {
+            if (confirm('确定要删除这个等级吗？')) {
+                fetch(`/api/levels/${levelId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        alert('等级删除成功');
+                        loadLevelStats();
+                        loadLevelsList();
+                    } else {
+                        alert('删除失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('删除等级失败:', error);
+                    alert('删除等级失败');
+                });
+            }
+        }
+        
+        function loadLevelsList() {
+            fetch('/api/levels')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        renderLevelsTable(data.data);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载等级列表失败:', error);
+                });
+        }
+        
+        function renderLevelsTable(levels) {
+            const tbody = document.getElementById('levelsTableBody');
+            if (!levels || levels.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">暂无等级数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = levels.map(level => `
+                <tr>
+                    <td><span class="level-badge">${level.level}</span></td>
+                    <td><strong>${level.level_name}</strong></td>
+                    <td><span class="multiplier-badge">${level.ad_coin_multiplier}x</span></td>
+                    <td><span class="multiplier-badge">${level.game_coin_multiplier}x</span></td>
+                    <td>${level.min_experience} - ${level.max_experience || '∞'}</td>
+                    <td>
+                        <span class="status-badge ${level.is_active ? 'active' : 'inactive'}">
+                            ${level.is_active ? '✅ 启用' : '❌ 禁用'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn-small btn-primary" onclick="showEditLevelModal(${level.id})">编辑</button>
+                        <button class="btn-small btn-danger" onclick="deleteLevelData(${level.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 版本管理相关函数
+        function showAddVersionModal() {
+            document.getElementById('versionModalTitle').textContent = '发布新版本';
+            document.getElementById('versionForm').reset();
+            document.getElementById('versionId').value = '';
+            document.getElementById('versionModal').style.display = 'flex';
+        }
+        
+        function showEditVersionModal(versionId) {
+            document.getElementById('versionModalTitle').textContent = '编辑版本';
+            document.getElementById('versionId').value = versionId;
+            
+            // 加载版本数据
+            fetch(`/api/versions/${versionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        const version = data.data;
+                        document.getElementById('versionName').value = version.version_name;
+                        document.getElementById('versionCode').value = version.version_code;
+                        document.getElementById('versionPlatform').value = version.platform;
+                        document.getElementById('versionUpdateContent').value = version.update_content || '';
+                        document.getElementById('versionIsForceUpdate').checked = version.is_force_update === 1;
+                        document.getElementById('versionMinSupportVersion').value = version.min_support_version || '';
+                        
+                        document.getElementById('versionModal').style.display = 'flex';
+                    }
+                })
+                .catch(error => {
+                    console.error('加载版本数据失败:', error);
+                    alert('加载版本数据失败');
+                });
+        }
+        
+        function closeVersionModal() {
+            document.getElementById('versionModal').style.display = 'none';
+        }
+        
+        function saveVersionData() {
+            const versionId = document.getElementById('versionId').value;
+            const isEdit = versionId !== '';
+            
+            const versionData = {
+                version_name: document.getElementById('versionName').value,
+                version_code: parseInt(document.getElementById('versionCode').value),
+                platform: document.getElementById('versionPlatform').value,
+                download_url: document.getElementById('versionDownloadUrl').value || 'https://example.com/app.apk',
+                update_content: document.getElementById('versionUpdateContent').value,
+                is_force_update: document.getElementById('versionIsForceUpdate').checked ? 1 : 0,
+                min_support_version: document.getElementById('versionMinSupportVersion').value ? parseInt(document.getElementById('versionMinSupportVersion').value) : null,
+                publish_time: new Date().toISOString()
+            };
+            
+            const url = isEdit ? `/api/versions/${versionId}` : '/api/versions';
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(versionData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert(isEdit ? '版本更新成功' : '版本发布成功');
+                    closeVersionModal();
+                    loadVersionStats();
+                    loadVersionsList();
+                } else {
+                    alert('操作失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('保存版本失败:', error);
+                alert('保存版本失败');
+            });
+        }
+        
+        function deleteVersionData(versionId) {
+            if (confirm('确定要删除这个版本吗？')) {
+                fetch(`/api/versions/${versionId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        alert('版本删除成功');
+                        loadVersionStats();
+                        loadVersionsList();
+                    } else {
+                        alert('删除失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('删除版本失败:', error);
+                    alert('删除版本失败');
+                });
+            }
+        }
+        
+        function loadVersionsList() {
+            fetch('/api/versions')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        renderVersionsTable(data.data);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载版本列表失败:', error);
+                });
+        }
+        
+        function renderVersionsTable(versions) {
+            const tbody = document.getElementById('versionsTableBody');
+            if (!versions || versions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">暂无版本数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = versions.map(version => `
+                <tr>
+                    <td><strong>📱 ${version.version_name}</strong></td>
+                    <td><span class="version-badge">${version.version_code}</span></td>
+                    <td>${version.file_size ? formatFileSize(version.file_size) : '-'}</td>
+                    <td>
+                        <span class="force-badge ${version.is_force_update ? 'force' : 'normal'}">
+                            ${version.is_force_update ? '🔴 强制' : '🟢 普通'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-badge ${version.status === 'active' ? 'active' : 'inactive'}">
+                            ${version.status === 'active' ? '✅ 活跃' : '❌ 停用'}
+                        </span>
+                    </td>
+                    <td>${version.publish_time ? new Date(version.publish_time).toLocaleDateString() : '-'}</td>
+                    <td>
+                        <button class="btn-small btn-primary" onclick="showEditVersionModal(${version.id})">编辑</button>
+                        <button class="btn-small btn-danger" onclick="deleteVersionData(${version.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
     </script>
+    
+    <!-- 等级管理模态框 -->
+    <div id="levelModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="levelModalTitle">添加等级</h3>
+                <span class="close" onclick="closeLevelModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="levelForm">
+                    <input type="hidden" id="levelId" value="">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>等级</label>
+                            <input type="number" id="levelNumber" min="1" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label>等级名称</label>
+                            <input type="text" id="levelName" maxlength="50" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>广告金币倍数</label>
+                            <input type="number" id="adCoinMultiplier" step="0.01" min="0.1" max="10" value="1.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label>游戏金币倍数</label>
+                            <input type="number" id="gameCoinMultiplier" step="0.01" min="0.1" max="10" value="1.00" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>最小经验值</label>
+                            <input type="number" id="minExperience" min="0" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>最大经验值</label>
+                            <input type="number" id="maxExperience" min="0" placeholder="留空表示无上限">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>等级描述</label>
+                        <textarea id="levelDescription" rows="3" placeholder="等级描述（可选）"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="levelIsActive" checked>
+                            启用此等级
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeLevelModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveLevelData()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 版本管理模态框 -->
+    <div id="versionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="versionModalTitle">发布新版本</h3>
+                <span class="close" onclick="closeVersionModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="versionForm">
+                    <input type="hidden" id="versionId" value="">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>版本名称</label>
+                            <input type="text" id="versionName" placeholder="如: 1.0.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>版本号</label>
+                            <input type="number" id="versionCode" min="1" placeholder="递增整数" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>平台</label>
+                        <input type="text" id="versionPlatform" value="android" readonly style="background-color: #f5f5f5;">
+                    </div>
+                    <div class="form-group">
+                        <label>下载链接</label>
+                        <input type="url" id="versionDownloadUrl" placeholder="APK文件下载链接">
+                    </div>
+                    <div class="form-group">
+                        <label>更新内容</label>
+                        <textarea id="versionUpdateContent" rows="4" placeholder="每行一个更新点"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="versionIsForceUpdate">
+                                强制更新
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>最低支持版本号</label>
+                            <input type="number" id="versionMinSupportVersion" min="1" placeholder="可选">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeVersionModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveVersionData()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-group {
+            flex: 1;
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .checkbox-label {
+            display: flex !important;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: auto !important;
+        }
+        
+        /* 表格样式增强 */
+        .level-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+        
+        .multiplier-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .version-badge {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .platform-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .platform-badge.android {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .platform-badge.ios {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .force-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .force-badge.force {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .force-badge.normal {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .status-badge.active {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .status-badge.inactive {
+            background: #f5f5f5;
+            color: #757575;
+        }
+        
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        
+        .btn-small.btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-small.btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-small:hover {
+            opacity: 0.8;
+        }
+    </style>
 </body>
 </html>

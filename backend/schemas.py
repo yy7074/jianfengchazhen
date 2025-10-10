@@ -271,4 +271,56 @@ class UserLevelConfigInfo(BaseModel):
     updated_time: datetime
     
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+# 版本管理相关模型
+class AppVersionCreate(BaseModel):
+    version_name: str = Field(..., max_length=20, description="版本名称，如1.0.0")
+    version_code: int = Field(..., ge=1, description="版本号，递增整数")
+    platform: str = Field(default="android", pattern="^android$", description="平台（仅支持Android）")
+    download_url: str = Field(..., max_length=500, description="下载链接")
+    file_size: Optional[int] = Field(None, ge=0, description="文件大小（字节）")
+    file_name: Optional[str] = Field(None, max_length=255, description="文件名")
+    update_content: Optional[str] = Field(None, description="更新内容描述")
+    is_force_update: int = Field(default=0, description="是否强制更新：1是，0否")
+    min_support_version: Optional[int] = Field(None, ge=1, description="最低支持的版本号")
+    publish_time: Optional[datetime] = Field(None, description="发布时间")
+
+class AppVersionUpdate(BaseModel):
+    version_name: Optional[str] = Field(None, max_length=20, description="版本名称")
+    download_url: Optional[str] = Field(None, max_length=500, description="下载链接")
+    file_size: Optional[int] = Field(None, ge=0, description="文件大小（字节）")
+    file_name: Optional[str] = Field(None, max_length=255, description="文件名")
+    update_content: Optional[str] = Field(None, description="更新内容描述")
+    is_force_update: Optional[int] = Field(None, description="是否强制更新")
+    min_support_version: Optional[int] = Field(None, ge=1, description="最低支持的版本号")
+    status: Optional[str] = Field(None, pattern="^(active|inactive)$", description="状态")
+    publish_time: Optional[datetime] = Field(None, description="发布时间")
+
+class AppVersionInfo(BaseModel):
+    id: int
+    version_name: str
+    version_code: int
+    platform: str
+    download_url: str
+    file_size: Optional[int]
+    file_name: Optional[str]
+    update_content: Optional[str]
+    is_force_update: int
+    min_support_version: Optional[int]
+    status: str
+    publish_time: Optional[datetime]
+    created_time: datetime
+    updated_time: datetime
+    
+    class Config:
+        from_attributes = True
+
+class VersionCheckRequest(BaseModel):
+    platform: str = Field(default="android", pattern="^android$", description="平台（仅支持Android）")
+    current_version_code: int = Field(..., ge=1, description="当前版本号")
+
+class VersionCheckResponse(BaseModel):
+    has_update: bool = Field(..., description="是否有更新")
+    is_force_update: bool = Field(default=False, description="是否强制更新")
+    latest_version: Optional[AppVersionInfo] = Field(None, description="最新版本信息") 

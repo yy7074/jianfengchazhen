@@ -8,6 +8,7 @@ from schemas import *
 from services.user_service import UserService
 from services.ad_service import AdService
 from services.config_service import ConfigService
+from services.version_service import VersionService
 from models import *
 from typing import List
 import os

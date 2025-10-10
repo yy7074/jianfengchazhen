@@ -40,6 +40,8 @@ import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.game.needleinsert.utils.UserManager
 import com.game.needleinsert.utils.AppTimeLimitManager
+import com.game.needleinsert.utils.VersionManager
+import com.game.needleinsert.utils.ApkInstaller
 import com.game.needleinsert.viewmodel.UserViewModel
 import com.game.needleinsert.model.User
 import kotlinx.coroutines.launch
@@ -49,9 +51,12 @@ import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.lifecycle.lifecycleScope
 import com.game.needleinsert.ui.TimeLimitDialog
+import com.game.needleinsert.ui.components.UpdateDialog
 import com.game.needleinsert.config.AppConfig
+import com.game.needleinsert.model.AppVersionInfo
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,6 +92,15 @@ fun MainNavigation() {
     // 时间限制状态管理
     var showTimeLimitDialog by remember { mutableStateOf(false) }
     
+    // 版本更新状态管理
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var updateVersionInfo by remember { mutableStateOf<AppVersionInfo?>(null) }
+    var isForceUpdate by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0) }
+    var isDownloading by remember { mutableStateOf(false) }
+    
+    val coroutineScope = rememberCoroutineScope()
+    
     // 检查时间限制 - 持续监控
     LaunchedEffect(Unit) {
         // 初始化时间限制管理器（不清除数据，保持持久化）
@@ -119,6 +133,26 @@ fun MainNavigation() {
         }
     }
     
+    // 检查版本更新
+    LaunchedEffect(Unit) {
+        try {
+            Log.d("VersionCheck", "开始检查版本更新...")
+            val versionCheckResult = VersionManager.checkVersionUpdate(context)
+            
+            versionCheckResult?.let { result ->
+                if (result.hasUpdate && result.latestVersion != null) {
+                    Log.d("VersionCheck", "发现新版本: ${result.latestVersion.versionName}")
+                    updateVersionInfo = result.latestVersion
+                    isForceUpdate = result.isForceUpdate
+                    showUpdateDialog = true
+                } else {
+                    Log.d("VersionCheck", "当前已是最新版本")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("VersionCheck", "版本检查失败", e)
+        }
+    }
     
     // 启动时自动登录
     LaunchedEffect(Unit) {
@@ -172,6 +206,73 @@ fun MainNavigation() {
             }
         )
         return // 如果显示时间限制弹窗，不显示其他内容
+    }
+    
+    // 显示版本更新弹窗
+    if (showUpdateDialog && updateVersionInfo != null) {
+        UpdateDialog(
+            versionInfo = updateVersionInfo!!,
+            isForceUpdate = isForceUpdate,
+            onDownload = {
+                coroutineScope.launch {
+                    try {
+                        isDownloading = true
+                        downloadProgress = 0
+                        
+                        val fileName = updateVersionInfo!!.fileName ?: "update_${updateVersionInfo!!.versionName}.apk"
+                        val downloadUrl = updateVersionInfo!!.downloadUrl
+                        
+                        Log.d("UpdateDownload", "开始下载APK: $downloadUrl")
+                        
+                        val apkFile = ApkInstaller.downloadApk(
+                            context = context,
+                            downloadUrl = downloadUrl,
+                            fileName = fileName,
+                            onProgress = { progress ->
+                                downloadProgress = progress
+                                Log.d("UpdateDownload", "下载进度: $progress%")
+                            }
+                        )
+                        
+                        isDownloading = false
+                        
+                        if (apkFile != null) {
+                            Log.d("UpdateDownload", "下载完成，开始安装")
+                            
+                            // 检查安装权限
+                            if (ApkInstaller.canInstallUnknownApps(context)) {
+                                ApkInstaller.installApk(context, apkFile)
+                                showUpdateDialog = false
+                            } else {
+                                Log.w("UpdateDownload", "需要安装未知来源应用权限")
+                                ApkInstaller.requestInstallPermission(context)
+                            }
+                        } else {
+                            Log.e("UpdateDownload", "下载失败")
+                        }
+                        
+                    } catch (e: Exception) {
+                        Log.e("UpdateDownload", "下载或安装失败", e)
+                        isDownloading = false
+                    }
+                }
+            },
+            onCancel = {
+                if (!isForceUpdate) {
+                    showUpdateDialog = false
+                }
+            },
+            onDismiss = {
+                if (!isForceUpdate) {
+                    showUpdateDialog = false
+                }
+            }
+        )
+        
+        // 如果是强制更新，不显示其他内容
+        if (isForceUpdate) {
+            return
+        }
     }
     
     when (currentScreen) {

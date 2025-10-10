@@ -30,6 +30,10 @@ class AdminRole(enum.Enum):
     ADMIN = "admin"
     OPERATOR = "operator"
 
+class VersionStatus(enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
 class User(Base):
     __tablename__ = "users"
     
@@ -203,4 +207,28 @@ class Admin(Base):
     role = Column(Enum(AdminRole), default=AdminRole.ADMIN)
     last_login_time = Column(DateTime)
     created_time = Column(DateTime, default=func.now())
-    status = Column(Integer, default=1, comment="状态：1正常，0禁用") 
+    status = Column(Integer, default=1, comment="状态：1正常，0禁用")
+
+class AppVersion(Base):
+    __tablename__ = "app_versions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    version_name = Column(String(20), nullable=False, comment="版本名称，如1.0.0")
+    version_code = Column(Integer, nullable=False, comment="版本号，递增整数")
+    platform = Column(String(20), nullable=False, comment="平台：android/ios")
+    download_url = Column(String(500), nullable=False, comment="下载链接")
+    file_size = Column(Integer, comment="文件大小（字节）")
+    file_name = Column(String(255), comment="文件名")
+    update_content = Column(Text, comment="更新内容描述")
+    is_force_update = Column(Integer, default=0, comment="是否强制更新：1是，0否")
+    min_support_version = Column(Integer, comment="最低支持的版本号")
+    status = Column(Enum(VersionStatus), default=VersionStatus.ACTIVE, comment="状态")
+    publish_time = Column(DateTime, comment="发布时间")
+    created_time = Column(DateTime, default=func.now())
+    updated_time = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 索引
+    __table_args__ = (
+        Index('idx_platform_version', 'platform', 'version_code'),
+        Index('idx_status', 'status'),
+    ) 

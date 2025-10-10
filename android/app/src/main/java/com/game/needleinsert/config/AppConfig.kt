@@ -54,7 +54,8 @@ object AppConfig {
      * 网络配置
      */
     object Network {
-        const val BASE_URL = "http://8.137.103.175:3001/"
+        // const val BASE_URL = "http://8.137.103.175:3001/"
+        const val BASE_URL = "https://8089.dachaonet.com"
         const val CONNECTION_TIMEOUT = 30L // 秒
         const val READ_TIMEOUT = 30L // 秒
     }

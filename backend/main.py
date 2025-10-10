@@ -64,13 +64,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # 导入路由
-from routers import user_router, ad_router, game_router, admin_router
+from routers import user_router, ad_router, game_router, admin_router, version_router
 
 # 注册路由
 app.include_router(user_router.router, prefix="/api/user", tags=["用户"])
 app.include_router(ad_router.router, prefix="/api/ad", tags=["广告"])
 app.include_router(game_router.router, prefix="/api/game", tags=["游戏"])
 app.include_router(admin_router.router, prefix="/admin", tags=["管理"])
+app.include_router(version_router.router, tags=["版本管理"])
 
 @app.on_event("startup")
 async def startup_event():

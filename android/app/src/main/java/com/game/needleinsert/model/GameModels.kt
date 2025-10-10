@@ -204,4 +204,33 @@ data class WithdrawResponse(
     @SerializedName("fee_coins") val feeCoins: Double,
     @SerializedName("fee_rate") val feeRate: Double,
     @SerializedName("status") val status: String
+)
+
+// 版本检查相关数据模型
+data class VersionCheckRequest(
+    @SerializedName("platform") val platform: String,
+    @SerializedName("current_version_code") val currentVersionCode: Int
+)
+
+data class AppVersionInfo(
+    @SerializedName("id") val id: Int,
+    @SerializedName("version_name") val versionName: String,
+    @SerializedName("version_code") val versionCode: Int,
+    @SerializedName("platform") val platform: String,
+    @SerializedName("download_url") val downloadUrl: String,
+    @SerializedName("file_size") val fileSize: Long?,
+    @SerializedName("file_name") val fileName: String?,
+    @SerializedName("update_content") val updateContent: String?,
+    @SerializedName("is_force_update") val isForceUpdate: Int,
+    @SerializedName("min_support_version") val minSupportVersion: Int?,
+    @SerializedName("status") val status: String,
+    @SerializedName("publish_time") val publishTime: String?,
+    @SerializedName("created_time") val createdTime: String,
+    @SerializedName("updated_time") val updatedTime: String
+)
+
+data class VersionCheckResponse(
+    @SerializedName("has_update") val hasUpdate: Boolean,
+    @SerializedName("is_force_update") val isForceUpdate: Boolean,
+    @SerializedName("latest_version") val latestVersion: AppVersionInfo?
 ) 

@@ -78,4 +78,8 @@ interface ApiService {
     // 系统配置相关接口
     @GET("admin/config/{key}")
     suspend fun getSystemConfig(@Path("key") key: String): Response<BaseResponse<Map<String, Any>>>
+    
+    // 版本检查相关接口
+    @POST("api/check-update")
+    suspend fun checkVersionUpdate(@Body request: VersionCheckRequest): Response<BaseResponse<VersionCheckResponse>>
 } 
