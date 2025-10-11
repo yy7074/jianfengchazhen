@@ -2685,32 +2685,28 @@
                 
             } catch (error) {
                 console.error('加载等级数据失败:', error);
-                document.getElementById('levelsList').innerHTML = 
-                    '<div class="error-state">❌ 加载等级数据失败，请刷新重试</div>';
+                const tbody = document.getElementById('levelsTableBody');
+                if (tbody) {
+                    tbody.innerHTML = 
+                        '<tr><td colspan="7" style="text-align: center; padding: 20px;"><div class="error-state">❌ 加载等级数据失败，请刷新重试</div></td></tr>';
+                }
             }
         }
 
         function renderLevelsList(levels) {
-            const container = document.getElementById('levelsList');
+            const container = document.getElementById('levelsTableBody');
             
-            if (!levels || levels.length === 0) {
-                container.innerHTML = '<div class="empty-state">暂无等级配置</div>';
+            if (!container) {
+                console.error('levelsTableBody 元素不存在');
                 return;
             }
             
-            const tableHTML = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>等级</th>
-                            <th>名称</th>
-                            <th>广告倍数</th>
-                            <th>游戏倍数</th>
-                            <th>经验范围</th>
-                            <th>状态</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            if (!levels || levels.length === 0) {
+                container.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;"><div class="empty-state">暂无等级配置</div></td></tr>';
+                return;
+            }
+            
+            const rowsHTML = `
                         ${levels.map(level => {
                             const levelBadgeClass = `level-badge level-${level.level}`;
                             const statusColor = level.is_active ? '#2ecc71' : '#e74c3c';
@@ -2744,14 +2740,16 @@
                                             ${statusText}
                                         </span>
                                     </td>
+                                    <td>
+                                        <button class="btn btn-small" onclick="showEditLevelModal(${level.id})" style="padding: 4px 8px; font-size: 12px;">编辑</button>
+                                        <button class="btn btn-small btn-danger" onclick="deleteLevelData(${level.id})" style="padding: 4px 8px; font-size: 12px;">删除</button>
+                                    </td>
                                 </tr>
                             `;
                         }).join('')}
-                    </tbody>
-                </table>
             `;
             
-            container.innerHTML = tableHTML;
+            container.innerHTML = rowsHTML;
         }
 
         function renderLevelDistribution(distribution) {
@@ -2854,7 +2852,7 @@
             document.getElementById('levelId').value = levelId;
             
             // 加载等级数据
-            fetch(`/api/levels/${levelId}`)
+            fetch(`/admin/api/levels/${levelId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.code === 200) {
@@ -2882,22 +2880,45 @@
         }
         
         function saveLevelData() {
+            // 验证表单
+            const form = document.getElementById('levelForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
             const levelId = document.getElementById('levelId').value;
             const isEdit = levelId !== '';
             
+            // 获取并验证表单数据
+            const levelNumber = document.getElementById('levelNumber').value;
+            const levelName = document.getElementById('levelName').value;
+            const adMultiplier = document.getElementById('adCoinMultiplier').value;
+            const gameMultiplier = document.getElementById('gameCoinMultiplier').value;
+            const minExp = document.getElementById('minExperience').value;
+            
+            if (!levelNumber || !levelName || !adMultiplier || !gameMultiplier || minExp === '') {
+                alert('请填写所有必填字段');
+                return;
+            }
+            
             const levelData = {
-                level: parseInt(document.getElementById('levelNumber').value),
-                level_name: document.getElementById('levelName').value,
-                ad_coin_multiplier: parseFloat(document.getElementById('adCoinMultiplier').value),
-                game_coin_multiplier: parseFloat(document.getElementById('gameCoinMultiplier').value),
-                min_experience: parseInt(document.getElementById('minExperience').value),
+                level: parseInt(levelNumber),
+                level_name: levelName,
+                ad_coin_multiplier: parseFloat(adMultiplier),
+                game_coin_multiplier: parseFloat(gameMultiplier),
+                min_experience: parseInt(minExp),
                 max_experience: document.getElementById('maxExperience').value ? parseInt(document.getElementById('maxExperience').value) : null,
-                description: document.getElementById('levelDescription').value,
+                description: document.getElementById('levelDescription').value || '',
                 is_active: document.getElementById('levelIsActive').checked ? 1 : 0
             };
             
-            const url = isEdit ? `/api/levels/${levelId}` : '/api/levels';
+            const url = isEdit ? `/admin/api/levels/${levelId}` : '/admin/api/levels';
             const method = isEdit ? 'PUT' : 'POST';
+            
+            console.log('发送数据:', levelData);
+            console.log('请求URL:', url);
+            console.log('请求方法:', method);
             
             fetch(url, {
                 method: method,
@@ -2906,26 +2927,30 @@
                 },
                 body: JSON.stringify(levelData)
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('响应状态:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('响应数据:', data);
                 if (data.code === 200) {
                     alert(isEdit ? '等级更新成功' : '等级添加成功');
                     closeLevelModal();
                     loadLevelStats();
                     loadLevelsList();
                 } else {
-                    alert('操作失败: ' + data.message);
+                    alert('操作失败: ' + (data.message || data.detail || JSON.stringify(data)));
                 }
             })
             .catch(error => {
                 console.error('保存等级失败:', error);
-                alert('保存等级失败');
+                alert('保存等级失败: ' + error.message);
             });
         }
         
         function deleteLevelData(levelId) {
             if (confirm('确定要删除这个等级吗？')) {
-                fetch(`/api/levels/${levelId}`, {
+                fetch(`/admin/api/levels/${levelId}`, {
                     method: 'DELETE'
                 })
                 .then(response => response.json())
@@ -2946,7 +2971,7 @@
         }
         
         function loadLevelsList() {
-            fetch('/api/levels')
+            fetch('/admin/api/levels')
                 .then(response => response.json())
                 .then(data => {
                     if (data.code === 200) {
@@ -3429,11 +3454,11 @@
                             启用此等级
                         </label>
                     </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeLevelModal()">取消</button>
+                        <button type="button" class="btn btn-primary" onclick="saveLevelData()">保存</button>
+                    </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeLevelModal()">取消</button>
-                <button class="btn btn-primary" onclick="saveLevelData()">保存</button>
             </div>
         </div>
     </div>
