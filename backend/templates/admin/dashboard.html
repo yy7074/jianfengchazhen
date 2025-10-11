@@ -739,6 +739,9 @@
         <div class="header-right">
             <div class="header-time" id="currentTime"></div>
             <div class="header-user">👤 管理员</div>
+            <button onclick="logout()" style="margin-left: 15px; padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                🚪 登出
+            </button>
         </div>
     </div>
 
@@ -1423,6 +1426,31 @@
         function updateTime() {
             const now = new Date();
             document.getElementById('currentTime').textContent = now.toLocaleTimeString('zh-CN');
+        }
+
+        // 登出
+        async function logout() {
+            if (!confirm('确定要登出吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/api/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    alert('已登出');
+                    window.location.href = '/admin/login';
+                } else {
+                    alert('登出失败');
+                }
+            } catch (error) {
+                console.error('登出错误:', error);
+                // 即使出错也跳转到登录页
+                window.location.href = '/admin/login';
+            }
         }
 
         // 页面切换

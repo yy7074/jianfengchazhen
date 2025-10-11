@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, or_
@@ -10,25 +10,145 @@ from services.ad_service import AdService
 from services.config_service import ConfigService
 from services.version_service import VersionService
 from models import *
-from typing import List
+from typing import List, Optional
 import os
 from datetime import date, datetime, timedelta
+import hashlib
+import secrets
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# 简单的管理员认证（生产环境应使用更安全的方式）
-def verify_admin():
-    # 这里应该实现真正的管理员认证
-    # 暂时返回True，实际项目中需要JWT或Session认证
-    return True
+# Session存储（生产环境应使用Redis或数据库）
+admin_sessions = {}
+
+def hash_password(password: str) -> str:
+    """密码加密"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def create_session(admin_id: int) -> str:
+    """创建Session"""
+    session_id = secrets.token_urlsafe(32)
+    admin_sessions[session_id] = {
+        "admin_id": admin_id,
+        "created_at": datetime.now()
+    }
+    return session_id
+
+def verify_admin(request: Request) -> Optional[int]:
+    """验证管理员Session"""
+    session_id = request.cookies.get("admin_session")
+    if not session_id or session_id not in admin_sessions:
+        return None
+    
+    session_data = admin_sessions[session_id]
+    # 检查Session是否过期（24小时）
+    if (datetime.now() - session_data["created_at"]).total_seconds() > 86400:
+        del admin_sessions[session_id]
+        return None
+    
+    return session_data["admin_id"]
+
+
+# ==================== 登录相关路由 ====================
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """登录页面"""
+    return templates.TemplateResponse("admin/login.html", {"request": request})
+
+@router.post("/api/login")
+async def admin_login(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """管理员登录API"""
+    try:
+        body = await request.json()
+        username = body.get("username", "").strip()
+        password = body.get("password", "")
+        
+        if not username or not password:
+            return JSONResponse(
+                content={"success": False, "message": "用户名和密码不能为空"},
+                status_code=400
+            )
+        
+        # 查询管理员
+        admin = db.query(Admin).filter(
+            Admin.username == username,
+            Admin.status == 1
+        ).first()
+        
+        if not admin:
+            return JSONResponse(
+                content={"success": False, "message": "用户名或密码错误"},
+                status_code=401
+            )
+        
+        # 验证密码
+        password_hash = hash_password(password)
+        if admin.password_hash != password_hash:
+            return JSONResponse(
+                content={"success": False, "message": "用户名或密码错误"},
+                status_code=401
+            )
+        
+        # 更新最后登录时间
+        admin.last_login_time = datetime.now()
+        db.commit()
+        
+        # 创建Session
+        session_id = create_session(admin.id)
+        
+        # 设置Cookie
+        response = JSONResponse(
+            content={
+                "success": True,
+                "message": "登录成功",
+                "data": {
+                    "username": admin.username,
+                    "role": admin.role.value if admin.role else "admin"
+                }
+            }
+        )
+        response.set_cookie(
+            key="admin_session",
+            value=session_id,
+            httponly=True,
+            max_age=86400,  # 24小时
+            samesite="lax"
+        )
+        
+        return response
+        
+    except Exception as e:
+        print(f"登录错误: {e}")
+        return JSONResponse(
+            content={"success": False, "message": f"登录失败: {str(e)}"},
+            status_code=500
+        )
+
+@router.post("/api/logout")
+async def admin_logout(request: Request, response: Response):
+    """管理员登出"""
+    session_id = request.cookies.get("admin_session")
+    if session_id and session_id in admin_sessions:
+        del admin_sessions[session_id]
+    
+    response = JSONResponse(content={"success": True, "message": "已登出"})
+    response.delete_cookie("admin_session")
+    return response
+
+# ==================== 管理后台页面 ====================
 
 # 管理后台首页
 @router.get("/", response_class=HTMLResponse)
 async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     """管理后台首页"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     # 获取统计数据
     today = date.today()
@@ -85,8 +205,8 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 @router.get("/withdraws", response_class=HTMLResponse)
 async def withdraw_management_page(request: Request):
     """提现审核管理页面"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     return templates.TemplateResponse("admin/withdraw_management.html", {
         "request": request
@@ -96,8 +216,8 @@ async def withdraw_management_page(request: Request):
 @router.get("/levels", response_class=HTMLResponse)
 async def level_management_page(request: Request):
     """等级管理页面"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     return templates.TemplateResponse("admin/level_management.html", {
         "request": request
@@ -105,10 +225,10 @@ async def level_management_page(request: Request):
 
 # API接口
 @router.get("/api/stats")
-async def get_admin_stats(db: Session = Depends(get_db)):
+async def get_admin_stats(request: Request, db: Session = Depends(get_db)):
     """获取管理后台统计数据API"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     today = date.today()
     
@@ -163,14 +283,15 @@ async def get_admin_stats(db: Session = Depends(get_db)):
 # 用户管理
 @router.get("/api/users")
 async def get_users_list(
+    request: Request,
     page: int = 1,
     size: int = 20,
     search: str = None,
     db: Session = Depends(get_db)
 ):
     """获取用户列表"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     query = db.query(User)
     
@@ -221,10 +342,10 @@ async def get_users_list(
 
 # 用户等级管理
 @router.get("/api/levels")
-async def get_level_configs(db: Session = Depends(get_db)):
+async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -252,10 +373,10 @@ async def get_level_configs(db: Session = Depends(get_db)):
     )
 
 @router.post("/api/levels")
-async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -282,10 +403,10 @@ async def create_level_config(level_data: UserLevelConfigCreate, db: Session = D
     )
 
 @router.put("/api/levels/{level_id}")
-async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -308,10 +429,10 @@ async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, 
     )
 
 @router.delete("/api/levels/{level_id}")
-async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -321,10 +442,10 @@ async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
     return BaseResponse(message="删除成功")
 
 @router.get("/api/level-stats")
-async def get_level_stats(db: Session = Depends(get_db)):
+async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -342,8 +463,8 @@ async def update_user(
     db: Session = Depends(get_db)
 ):
     """更新用户信息"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -369,10 +490,10 @@ async def update_user(
 
 # 广告管理
 @router.get("/api/ads")
-async def get_ads_list(db: Session = Depends(get_db)):
+async def get_ads_list(request: Request, db: Session = Depends(get_db)):
     """获取广告列表"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     ads = AdService.get_all_ad_configs(db)
     # 临时简化，避免Pydantic验证问题
@@ -405,10 +526,10 @@ async def get_ads_list(db: Session = Depends(get_db)):
     )
 
 @router.post("/api/ads")
-async def create_ad(ad_data: AdConfigCreate, db: Session = Depends(get_db)):
+async def create_ad(request: Request, ad_data: AdConfigCreate, db: Session = Depends(get_db)):
     """创建广告"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     ad = AdService.create_ad_config(db, ad_data)
     return BaseResponse(
@@ -417,11 +538,11 @@ async def create_ad(ad_data: AdConfigCreate, db: Session = Depends(get_db)):
     )
 
 @router.put("/api/ads/{ad_id}")
-async def update_ad(ad_id: int, ad_data: AdConfigUpdate, db: Session = Depends(get_db)):
+async def update_ad(request: Request, ad_id: int, ad_data: AdConfigUpdate, db: Session = Depends(get_db)):
     """更新广告"""
     try:
-        if not verify_admin():
-            raise HTTPException(status_code=401, detail="需要管理员权限")
+        if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
         
         # 验证广告ID
         if ad_id <= 0:
@@ -470,10 +591,10 @@ async def update_ad(ad_id: int, ad_data: AdConfigUpdate, db: Session = Depends(g
         raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
 @router.delete("/api/ads/{ad_id}")
-async def delete_ad(ad_id: int, db: Session = Depends(get_db)):
+async def delete_ad(request: Request, ad_id: int, db: Session = Depends(get_db)):
     """删除广告"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     success = AdService.delete_ad_config(db, ad_id)
     if not success:
@@ -483,10 +604,10 @@ async def delete_ad(ad_id: int, db: Session = Depends(get_db)):
 
 # 文件上传
 @router.post("/api/upload/video")
-async def upload_video(file: UploadFile = File(...)):
+async def upload_video(request: Request, file: UploadFile = File(...)):
     """上传广告视频"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     # 检查文件类型
     allowed_types = ["video/mp4", "video/avi", "video/mov", "video/wmv"]
@@ -521,10 +642,10 @@ async def upload_video(file: UploadFile = File(...)):
 
 # 用户等级管理
 @router.get("/api/levels")
-async def get_level_configs(db: Session = Depends(get_db)):
+async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -552,10 +673,10 @@ async def get_level_configs(db: Session = Depends(get_db)):
     )
 
 @router.post("/api/levels")
-async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -582,10 +703,10 @@ async def create_level_config(level_data: UserLevelConfigCreate, db: Session = D
     )
 
 @router.put("/api/levels/{level_id}")
-async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -608,10 +729,10 @@ async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, 
     )
 
 @router.delete("/api/levels/{level_id}")
-async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -621,10 +742,10 @@ async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
     return BaseResponse(message="删除成功")
 
 @router.get("/api/level-stats")
-async def get_level_stats(db: Session = Depends(get_db)):
+async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -636,10 +757,10 @@ async def get_level_stats(db: Session = Depends(get_db)):
 
 # 系统配置
 @router.get("/api/configs")
-async def get_system_configs(db: Session = Depends(get_db)):
+async def get_system_configs(request: Request, db: Session = Depends(get_db)):
     """获取系统配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     configs = ConfigService.get_all_configs(db)
     return BaseResponse(
@@ -681,8 +802,8 @@ async def update_system_configs(
     db: Session = Depends(get_db)
 ):
     """批量更新系统配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     success = ConfigService.update_multiple_configs(db, config_updates)
     if success:
@@ -693,6 +814,7 @@ async def update_system_configs(
 # 提现管理
 @router.get("/api/withdraws")
 async def get_withdraw_requests(
+    request: Request,
     status: str = None,
     page: int = 1,
     size: int = 20,
@@ -705,8 +827,8 @@ async def get_withdraw_requests(
     db: Session = Depends(get_db)
 ):
     """获取提现申请列表（支持高级筛选）"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     query = db.query(WithdrawRequest).join(User)
     
@@ -778,10 +900,10 @@ async def get_withdraw_requests(
 
 # 用户等级管理
 @router.get("/api/levels")
-async def get_level_configs(db: Session = Depends(get_db)):
+async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -809,10 +931,10 @@ async def get_level_configs(db: Session = Depends(get_db)):
     )
 
 @router.post("/api/levels")
-async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -839,10 +961,10 @@ async def create_level_config(level_data: UserLevelConfigCreate, db: Session = D
     )
 
 @router.put("/api/levels/{level_id}")
-async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -865,10 +987,10 @@ async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, 
     )
 
 @router.delete("/api/levels/{level_id}")
-async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -878,10 +1000,10 @@ async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
     return BaseResponse(message="删除成功")
 
 @router.get("/api/level-stats")
-async def get_level_stats(db: Session = Depends(get_db)):
+async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -893,12 +1015,13 @@ async def get_level_stats(db: Session = Depends(get_db)):
 
 @router.get("/api/withdraws/{withdraw_id}")
 async def get_withdraw_detail(
+    request: Request,
     withdraw_id: int,
     db: Session = Depends(get_db)
 ):
     """获取提现申请详细信息"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     # 查询提现申请
     withdraw = db.query(WithdrawRequest).filter(
@@ -991,8 +1114,8 @@ async def approve_withdraw(
     db: Session = Depends(get_db)
 ):
     """批准提现申请"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     admin_note = None
     if request_data:
@@ -1011,13 +1134,14 @@ async def approve_withdraw(
 
 @router.put("/api/withdraws/{withdraw_id}/reject")
 async def reject_withdraw(
+    request: Request,
     withdraw_id: int,
     request_data: dict,
     db: Session = Depends(get_db)
 ):
     """拒绝提现申请"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     admin_note = request_data.get("admin_note", "").strip()
     if not admin_note:
@@ -1037,12 +1161,13 @@ async def reject_withdraw(
 # 批量操作API
 @router.post("/api/withdraws/batch-approve")
 async def batch_approve_withdraws(
+    request: Request,
     request_data: dict,
     db: Session = Depends(get_db)
 ):
     """批量批准提现申请"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     withdraw_ids = request_data.get("withdraw_ids", [])
     admin_note = request_data.get("admin_note", "批量批准")
@@ -1073,10 +1198,10 @@ async def batch_approve_withdraws(
 
 # 用户等级管理
 @router.get("/api/levels")
-async def get_level_configs(db: Session = Depends(get_db)):
+async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -1104,10 +1229,10 @@ async def get_level_configs(db: Session = Depends(get_db)):
     )
 
 @router.post("/api/levels")
-async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -1134,10 +1259,10 @@ async def create_level_config(level_data: UserLevelConfigCreate, db: Session = D
     )
 
 @router.put("/api/levels/{level_id}")
-async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -1160,10 +1285,10 @@ async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, 
     )
 
 @router.delete("/api/levels/{level_id}")
-async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -1173,10 +1298,10 @@ async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
     return BaseResponse(message="删除成功")
 
 @router.get("/api/level-stats")
-async def get_level_stats(db: Session = Depends(get_db)):
+async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -1188,12 +1313,13 @@ async def get_level_stats(db: Session = Depends(get_db)):
 
 @router.post("/api/withdraws/batch-reject")
 async def batch_reject_withdraws(
+    request: Request,
     request_data: dict,
     db: Session = Depends(get_db)
 ):
     """批量拒绝提现申请"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     withdraw_ids = request_data.get("withdraw_ids", [])
     admin_note = request_data.get("admin_note", "批量拒绝")
@@ -1227,10 +1353,10 @@ async def batch_reject_withdraws(
 
 # 用户等级管理
 @router.get("/api/levels")
-async def get_level_configs(db: Session = Depends(get_db)):
+async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -1258,10 +1384,10 @@ async def get_level_configs(db: Session = Depends(get_db)):
     )
 
 @router.post("/api/levels")
-async def create_level_config(level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
+async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -1288,10 +1414,10 @@ async def create_level_config(level_data: UserLevelConfigCreate, db: Session = D
     )
 
 @router.put("/api/levels/{level_id}")
-async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
+async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -1314,10 +1440,10 @@ async def update_level_config(level_id: int, level_data: UserLevelConfigUpdate, 
     )
 
 @router.delete("/api/levels/{level_id}")
-async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
+async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -1327,10 +1453,10 @@ async def delete_level_config(level_id: int, db: Session = Depends(get_db)):
     return BaseResponse(message="删除成功")
 
 @router.get("/api/level-stats")
-async def get_level_stats(db: Session = Depends(get_db)):
+async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
-    if not verify_admin():
-        raise HTTPException(status_code=401, detail="需要管理员权限")
+    if not verify_admin(request):
+            return RedirectResponse(url="/admin/login", status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)

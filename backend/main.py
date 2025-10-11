@@ -81,6 +81,7 @@ async def startup_event():
     os.makedirs("uploads", exist_ok=True)
     os.makedirs("uploads/videos", exist_ok=True)
     os.makedirs("uploads/avatars", exist_ok=True)
+    os.makedirs("uploads/apk", exist_ok=True)
     
     # 初始化默认配置
     db = next(get_db())
@@ -96,6 +97,28 @@ async def startup_event():
         from services.level_service import LevelService
         LevelService.init_default_levels(db)
         print("✅ 默认等级配置初始化完成")
+        
+        # 初始化默认管理员账号
+        from models import Admin, AdminRole
+        import hashlib
+        from datetime import datetime
+        
+        existing_admin = db.query(Admin).filter(Admin.username == "admin").first()
+        if not existing_admin:
+            admin = Admin(
+                username="admin",
+                password_hash=hashlib.sha256("admin123".encode()).hexdigest(),
+                email="admin@example.com",
+                role=AdminRole.SUPER_ADMIN,
+                status=1,
+                created_time=datetime.now()
+            )
+            db.add(admin)
+            db.commit()
+            print("✅ 默认管理员账号创建完成 (用户名: admin, 密码: admin123)")
+        else:
+            print("ℹ️  管理员账号已存在")
+            
     except Exception as e:
         print(f"❌ 初始化失败: {e}")
     finally:

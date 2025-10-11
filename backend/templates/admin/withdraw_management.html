@@ -381,9 +381,12 @@
                     <h1>💸 提现审核管理</h1>
                     <p>管理和审核用户提现申请，确保资金安全</p>
                 </div>
-                <div>
+                <div style="display: flex; gap: 10px;">
                     <button class="btn btn-secondary" onclick="location.href='/admin/'">
                         ← 返回主控台
+                    </button>
+                    <button class="btn" style="background: #e74c3c;" onclick="logout()">
+                        🚪 登出
                     </button>
                 </div>
             </div>
@@ -496,6 +499,30 @@
                 }
             });
         });
+
+        // 登出
+        async function logout() {
+            if (!confirm('确定要登出吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/api/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    alert('已登出');
+                    window.location.href = '/admin/login';
+                } else {
+                    alert('登出失败');
+                }
+            } catch (error) {
+                console.error('登出错误:', error);
+                window.location.href = '/admin/login';
+            }
+        }
 
         // 加载提现申请列表
         async function loadWithdraws(page = 1) {
