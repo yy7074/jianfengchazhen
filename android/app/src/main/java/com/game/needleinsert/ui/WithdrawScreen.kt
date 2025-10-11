@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalContext
 import android.content.Context
+import android.util.Log
 import com.game.needleinsert.utils.ConfigManager
 import com.game.needleinsert.viewmodel.WithdrawViewModel
 
@@ -42,12 +43,25 @@ fun WithdrawScreen(
         viewModel.loadUserInfo(context)
         viewModel.loadWithdrawHistory()
         
-        // 加载配置
+        // 强制刷新配置以确保获取最新值
         try {
-            minWithdrawAmount = ConfigManager.getMinWithdrawAmount(context)
-            maxWithdrawAmount = ConfigManager.getMaxWithdrawAmount(context)
-            coinToRmbRate = ConfigManager.getCoinToRmbRate(context)
+            Log.d("WithdrawScreen", "开始强制刷新配置...")
+            // 先清除缓存，确保获取最新配置
+            ConfigManager.clearCache(context)
+            ConfigManager.refreshConfig(context)?.let { config ->
+                Log.d("WithdrawScreen", "配置刷新成功: minWithdraw=${config.minWithdrawAmount}, maxWithdraw=${config.maxWithdrawAmount}")
+                minWithdrawAmount = config.minWithdrawAmount
+                maxWithdrawAmount = config.maxWithdrawAmount
+                coinToRmbRate = config.coinToRmbRate
+            } ?: run {
+                Log.w("WithdrawScreen", "配置刷新失败，使用默认配置获取")
+                minWithdrawAmount = ConfigManager.getMinWithdrawAmount(context)
+                maxWithdrawAmount = ConfigManager.getMaxWithdrawAmount(context)
+                coinToRmbRate = ConfigManager.getCoinToRmbRate(context)
+            }
+            Log.d("WithdrawScreen", "最终配置: minWithdraw=$minWithdrawAmount, maxWithdraw=$maxWithdrawAmount, coinRate=$coinToRmbRate")
         } catch (e: Exception) {
+            Log.e("WithdrawScreen", "配置加载异常，使用默认值", e)
             // 使用默认值
         }
     }

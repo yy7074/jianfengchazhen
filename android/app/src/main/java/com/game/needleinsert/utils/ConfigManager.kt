@@ -100,6 +100,21 @@ object ConfigManager {
     }
     
     /**
+     * 清除本地缓存
+     */
+    fun clearCache(context: Context) {
+        try {
+            Log.d(TAG, "清除配置缓存")
+            val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            sharedPrefs.edit().clear().apply()
+            cachedConfig = null
+            Log.d(TAG, "配置缓存已清除")
+        } catch (e: Exception) {
+            Log.e(TAG, "清除缓存失败", e)
+        }
+    }
+    
+    /**
      * 强制刷新配置
      */
     suspend fun refreshConfig(context: Context): AppConfig? {
