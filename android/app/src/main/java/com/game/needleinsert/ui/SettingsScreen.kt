@@ -489,9 +489,33 @@ fun VersionInfoCard() {
     var isForceUpdate by remember { mutableStateOf(false) }
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateMessage by remember { mutableStateOf("") }
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0) }
+    var pendingApkFile by remember { mutableStateOf<java.io.File?>(null) }
     
     // 获取当前版本信息
     val (currentVersionName, currentVersionCode) = VersionManager.getCurrentVersionInfo(context)
+    
+    // 监听权限状态变化，处理权限授权后的安装
+    LaunchedEffect(pendingApkFile) {
+        pendingApkFile?.let { apkFile ->
+            // 定期检查权限状态，直到获得权限或用户取消
+            while (pendingApkFile != null) {
+                if (ApkInstaller.canInstallUnknownApps(context)) {
+                    Log.d("InstallPermission", "权限已授予，继续安装APK")
+                    val success = ApkInstaller.installApk(context, apkFile)
+                    if (success) {
+                        showUpdateDialog = false
+                        updateMessage = "安装包已启动，请按提示完成安装"
+                    }
+                    pendingApkFile = null
+                    break
+                }
+                // 每秒检查一次权限状态
+                kotlinx.coroutines.delay(1000)
+            }
+        }
+    }
     
     SettingsCard(
         title = "版本信息",
@@ -561,11 +585,19 @@ fun VersionInfoCard() {
         UpdateDialog(
             versionInfo = updateVersionInfo!!,
             isForceUpdate = isForceUpdate,
+            isDownloading = isDownloading,
+            downloadProgress = downloadProgress,
             onDownload = {
                 coroutineScope.launch {
                     try {
+                        isDownloading = true
+                        downloadProgress = 0
                         val fileName = updateVersionInfo!!.fileName ?: "update_${updateVersionInfo!!.versionName}.apk"
-                        val downloadUrl = updateVersionInfo!!.downloadUrl
+                        val downloadUrl = if (updateVersionInfo!!.downloadUrl.startsWith("http")) {
+                            updateVersionInfo!!.downloadUrl
+                        } else {
+                            com.game.needleinsert.config.AppConfig.Network.BASE_URL + updateVersionInfo!!.downloadUrl
+                        }
                         
                         Log.d("UpdateDownload", "开始下载APK: $downloadUrl")
                         
@@ -574,19 +606,28 @@ fun VersionInfoCard() {
                             downloadUrl = downloadUrl,
                             fileName = fileName,
                             onProgress = { progress ->
+                                downloadProgress = progress
                                 Log.d("UpdateDownload", "下载进度: $progress%")
                             }
                         )
+                        
+                        isDownloading = false
                         
                         if (apkFile != null) {
                             Log.d("UpdateDownload", "下载完成，开始安装")
                             
                             // 检查安装权限
                             if (ApkInstaller.canInstallUnknownApps(context)) {
-                                ApkInstaller.installApk(context, apkFile)
-                                showUpdateDialog = false
+                                val success = ApkInstaller.installApk(context, apkFile)
+                                if (success) {
+                                    showUpdateDialog = false
+                                    updateMessage = "安装包已启动，请按提示完成安装"
+                                }
                             } else {
                                 Log.w("UpdateDownload", "需要安装未知来源应用权限")
+                                // 保存APK文件引用，等待权限授权后继续安装
+                                pendingApkFile = apkFile
+                                updateMessage = "请授权安装未知来源应用权限"
                                 ApkInstaller.requestInstallPermission(context)
                             }
                         } else {
@@ -596,7 +637,16 @@ fun VersionInfoCard() {
                         
                     } catch (e: Exception) {
                         Log.e("UpdateDownload", "下载或安装失败", e)
-                        updateMessage = "下载失败: ${e.message}"
+                        isDownloading = false
+                        
+                        // 显示用户友好的错误提示
+                        updateMessage = when {
+                            e.message?.contains("MalformedURLException") == true -> "下载链接格式错误，请稍后重试"
+                            e.message?.contains("UnknownHostException") == true -> "网络连接失败，请检查网络连接"
+                            e.message?.contains("SocketTimeoutException") == true -> "下载超时，请重试"
+                            e.message?.contains("FileNotFoundException") == true -> "文件不存在，请联系管理员"
+                            else -> "下载失败: ${e.message}"
+                        }
                     }
                 }
             },

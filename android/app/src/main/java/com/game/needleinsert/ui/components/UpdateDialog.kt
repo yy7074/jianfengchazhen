@@ -25,6 +25,8 @@ import com.game.needleinsert.utils.VersionManager
 fun UpdateDialog(
     versionInfo: AppVersionInfo,
     isForceUpdate: Boolean,
+    isDownloading: Boolean = false,
+    downloadProgress: Int = 0,
     onDownload: () -> Unit,
     onCancel: () -> Unit = {},
     onDismiss: () -> Unit = {}
@@ -155,6 +157,52 @@ fun UpdateDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
                 
+                // 下载进度条
+                if (isDownloading) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "正在下载更新包...",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // 进度条
+                            LinearProgressIndicator(
+                                progress = downloadProgress / 100f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            
+                            Spacer(modifier = Modifier.height(4.dp))
+                            
+                            // 进度文本
+                            Text(
+                                text = "$downloadProgress%",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                
                 // 按钮区域
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -164,8 +212,8 @@ fun UpdateDialog(
                         Arrangement.SpaceEvenly
                     }
                 ) {
-                    // 取消按钮（非强制更新时显示）
-                    if (!isForceUpdate) {
+                    // 取消按钮（非强制更新且未下载时显示）
+                    if (!isForceUpdate && !isDownloading) {
                         OutlinedButton(
                             onClick = onCancel,
                             modifier = Modifier.weight(1f)
@@ -179,9 +227,25 @@ fun UpdateDialog(
                     // 下载按钮
                     Button(
                         onClick = onDownload,
+                        enabled = !isDownloading,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(if (isForceUpdate) "立即更新" else "立即下载")
+                        if (isDownloading) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("下载中...")
+                            }
+                        } else {
+                            Text(if (isForceUpdate) "立即更新" else "立即下载")
+                        }
                     }
                 }
             }

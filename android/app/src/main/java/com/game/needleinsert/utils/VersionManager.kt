@@ -37,33 +37,53 @@ object VersionManager {
     suspend fun checkVersionUpdate(context: Context): VersionCheckResponse? {
         return withContext(Dispatchers.IO) {
             try {
-                val (_, currentVersionCode) = getCurrentVersionInfo(context)
+                val (currentVersionName, currentVersionCode) = getCurrentVersionInfo(context)
                 
                 val request = VersionCheckRequest(
                     platform = "android",
                     currentVersionCode = currentVersionCode
                 )
                 
-                Log.d(TAG, "检查版本更新: 当前版本号 = $currentVersionCode")
+                Log.d(TAG, "开始版本检查...")
+                Log.d(TAG, "当前版本: $currentVersionName (代码: $currentVersionCode)")
+                Log.d(TAG, "请求数据: platform=${request.platform}, currentVersionCode=${request.currentVersionCode}")
                 
-                val response = RetrofitClient.getApiService().checkVersionUpdate(request)
+                val apiService = RetrofitClient.getApiService()
+                Log.d(TAG, "获取API服务成功")
+                
+                val response = apiService.checkVersionUpdate(request)
+                Log.d(TAG, "网络请求完成, 状态码: ${response.code()}")
+                Log.d(TAG, "响应消息: ${response.message()}")
                 
                 if (response.isSuccessful) {
                     val baseResponse = response.body()
+                    Log.d(TAG, "响应体: $baseResponse")
+                    
                     if (baseResponse?.code == 200) {
                         val versionCheckResponse = baseResponse.data
-                        Log.d(TAG, "版本检查结果: hasUpdate=${versionCheckResponse?.hasUpdate}, isForceUpdate=${versionCheckResponse?.isForceUpdate}")
+                        Log.d(TAG, "版本检查成功!")
+                        Log.d(TAG, "有更新: ${versionCheckResponse?.hasUpdate}")
+                        Log.d(TAG, "强制更新: ${versionCheckResponse?.isForceUpdate}")
+                        
+                        versionCheckResponse?.latestVersion?.let { version ->
+                            Log.d(TAG, "最新版本: ${version.versionName} (代码: ${version.versionCode})")
+                            Log.d(TAG, "下载链接: ${version.downloadUrl}")
+                            Log.d(TAG, "文件大小: ${version.fileSize} bytes")
+                        }
+                        
                         return@withContext versionCheckResponse
                     } else {
-                        Log.e(TAG, "版本检查失败: ${baseResponse?.message}")
+                        Log.e(TAG, "API返回错误: code=${baseResponse?.code}, message=${baseResponse?.message}")
                     }
                 } else {
-                    Log.e(TAG, "版本检查请求失败: ${response.code()}")
+                    Log.e(TAG, "HTTP请求失败: ${response.code()} - ${response.message()}")
+                    val errorBody = response.errorBody()?.string()
+                    Log.e(TAG, "错误响应体: $errorBody")
                 }
                 
                 null
             } catch (e: Exception) {
-                Log.e(TAG, "检查版本更新异常", e)
+                Log.e(TAG, "版本检查异常: ${e.javaClass.simpleName} - ${e.message}", e)
                 null
             }
         }

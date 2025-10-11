@@ -98,6 +98,7 @@ fun MainNavigation() {
     var isForceUpdate by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableStateOf(0) }
     var isDownloading by remember { mutableStateOf(false) }
+    var pendingApkFile by remember { mutableStateOf<java.io.File?>(null) }
     
     val coroutineScope = rememberCoroutineScope()
     
@@ -151,6 +152,26 @@ fun MainNavigation() {
             }
         } catch (e: Exception) {
             Log.e("VersionCheck", "版本检查失败", e)
+        }
+    }
+    
+    // 监听权限状态变化，处理权限授权后的安装
+    LaunchedEffect(pendingApkFile) {
+        pendingApkFile?.let { apkFile ->
+            // 定期检查权限状态，直到获得权限或用户取消
+            while (pendingApkFile != null) {
+                if (ApkInstaller.canInstallUnknownApps(context)) {
+                    Log.d("InstallPermission", "权限已授予，继续安装APK")
+                    val success = ApkInstaller.installApk(context, apkFile)
+                    if (success) {
+                        showUpdateDialog = false
+                    }
+                    pendingApkFile = null
+                    break
+                }
+                // 每秒检查一次权限状态
+                kotlinx.coroutines.delay(1000)
+            }
         }
     }
     
@@ -213,6 +234,8 @@ fun MainNavigation() {
         UpdateDialog(
             versionInfo = updateVersionInfo!!,
             isForceUpdate = isForceUpdate,
+            isDownloading = isDownloading,
+            downloadProgress = downloadProgress,
             onDownload = {
                 coroutineScope.launch {
                     try {
@@ -220,7 +243,11 @@ fun MainNavigation() {
                         downloadProgress = 0
                         
                         val fileName = updateVersionInfo!!.fileName ?: "update_${updateVersionInfo!!.versionName}.apk"
-                        val downloadUrl = updateVersionInfo!!.downloadUrl
+                        val downloadUrl = if (updateVersionInfo!!.downloadUrl.startsWith("http")) {
+                            updateVersionInfo!!.downloadUrl
+                        } else {
+                            AppConfig.Network.BASE_URL + updateVersionInfo!!.downloadUrl
+                        }
                         
                         Log.d("UpdateDownload", "开始下载APK: $downloadUrl")
                         
@@ -241,10 +268,14 @@ fun MainNavigation() {
                             
                             // 检查安装权限
                             if (ApkInstaller.canInstallUnknownApps(context)) {
-                                ApkInstaller.installApk(context, apkFile)
-                                showUpdateDialog = false
+                                val success = ApkInstaller.installApk(context, apkFile)
+                                if (success) {
+                                    showUpdateDialog = false
+                                }
                             } else {
                                 Log.w("UpdateDownload", "需要安装未知来源应用权限")
+                                // 保存APK文件引用，等待权限授权后继续安装
+                                pendingApkFile = apkFile
                                 ApkInstaller.requestInstallPermission(context)
                             }
                         } else {
@@ -254,6 +285,18 @@ fun MainNavigation() {
                     } catch (e: Exception) {
                         Log.e("UpdateDownload", "下载或安装失败", e)
                         isDownloading = false
+                        
+                        // 显示用户友好的错误提示
+                        val errorMessage = when {
+                            e.message?.contains("MalformedURLException") == true -> "下载链接格式错误"
+                            e.message?.contains("UnknownHostException") == true -> "网络连接失败，请检查网络"
+                            e.message?.contains("SocketTimeoutException") == true -> "下载超时，请重试"
+                            e.message?.contains("FileNotFoundException") == true -> "文件不存在"
+                            else -> "下载失败: ${e.message}"
+                        }
+                        
+                        // 这里可以显示Toast或者更新UI状态
+                        Log.e("UpdateDownload", "用户提示: $errorMessage")
                     }
                 }
             },
