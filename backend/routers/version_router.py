@@ -101,6 +101,48 @@ async def create_version(version_data: AppVersionCreate, db: Session = Depends(g
             message=f"创建版本失败: {str(e)}"
         )
 
+@router.get("/api/versions/{version_id}")
+async def get_version_by_id(version_id: int, db: Session = Depends(get_db)):
+    """获取单个版本详情"""
+    if not verify_admin():
+        raise HTTPException(status_code=401, detail="需要管理员权限")
+    
+    try:
+        version = VersionService.get_version_by_id(db, version_id)
+        if not version:
+            return BaseResponse(
+                code=404,
+                message="版本不存在"
+            )
+        
+        version_data = {
+            "id": version.id,
+            "version_name": version.version_name,
+            "version_code": version.version_code,
+            "platform": version.platform,
+            "download_url": version.download_url,
+            "file_size": version.file_size,
+            "file_name": version.file_name,
+            "update_content": version.update_content,
+            "is_force_update": version.is_force_update,
+            "min_support_version": version.min_support_version,
+            "status": version.status.value if hasattr(version.status, 'value') else str(version.status),
+            "publish_time": version.publish_time.isoformat() if version.publish_time else None,
+            "created_time": version.created_time.isoformat() if version.created_time else None,
+            "updated_time": version.updated_time.isoformat() if version.updated_time else None
+        }
+        
+        return BaseResponse(
+            message="获取版本详情成功",
+            data=version_data
+        )
+        
+    except Exception as e:
+        return BaseResponse(
+            code=500,
+            message=f"获取版本详情失败: {str(e)}"
+        )
+
 @router.put("/api/versions/{version_id}")
 async def update_version(version_id: int, version_data: AppVersionUpdate, db: Session = Depends(get_db)):
     """更新版本信息"""

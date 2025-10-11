@@ -594,9 +594,18 @@ fun VersionInfoCard() {
                         downloadProgress = 0
                         val fileName = updateVersionInfo!!.fileName ?: "update_${updateVersionInfo!!.versionName}.apk"
                         val downloadUrl = if (updateVersionInfo!!.downloadUrl.startsWith("http")) {
+                            Log.d("UpdateDownload", "使用完整URL: ${updateVersionInfo!!.downloadUrl}")
                             updateVersionInfo!!.downloadUrl
                         } else {
-                            com.game.needleinsert.config.AppConfig.Network.BASE_URL + updateVersionInfo!!.downloadUrl
+                            val baseUrl = com.game.needleinsert.config.AppConfig.Network.BASE_URL
+                            val path = updateVersionInfo!!.downloadUrl
+                            val fullUrl = if (baseUrl.endsWith("/") || path.startsWith("/")) {
+                                baseUrl + path
+                            } else {
+                                "$baseUrl/$path"
+                            }
+                            Log.d("UpdateDownload", "构造完整URL: baseUrl=$baseUrl, path=$path, fullUrl=$fullUrl")
+                            fullUrl
                         }
                         
                         Log.d("UpdateDownload", "开始下载APK: $downloadUrl")
