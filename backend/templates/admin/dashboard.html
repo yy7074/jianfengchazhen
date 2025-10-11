@@ -1270,6 +1270,11 @@
                             <input type="number" id="withdrawal_fee_rate" class="form-input" placeholder="0" min="0" max="10" step="0.1">
                             <small style="color: #6b7280;">提现手续费百分比，0表示免费</small>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">每日提现次数限制</label>
+                            <input type="number" id="daily_withdraw_limit" class="form-input" placeholder="1" min="1" max="10" step="1">
+                            <small style="color: #6b7280;">用户每天最多可以提现多少次</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1842,7 +1847,8 @@
                 { config_key: 'withdrawal_min_coins', config_value: document.getElementById('withdrawal_min_coins').value, description: '提现最小金币数量' },
                 { config_key: 'min_withdraw_amount', config_value: document.getElementById('min_withdraw_amount').value, description: '最小提现金额（元）' },
                 { config_key: 'max_withdraw_amount', config_value: document.getElementById('max_withdraw_amount').value, description: '最大提现金额（元）' },
-                { config_key: 'withdrawal_fee_rate', config_value: document.getElementById('withdrawal_fee_rate').value, description: '提现手续费率（百分比，0表示免费）' }
+                { config_key: 'withdrawal_fee_rate', config_value: document.getElementById('withdrawal_fee_rate').value, description: '提现手续费率（百分比，0表示免费）' },
+                { config_key: 'daily_withdraw_limit', config_value: document.getElementById('daily_withdraw_limit').value, description: '每日提现次数限制' }
             ];
             
             await saveConfigs(configs, '金币兑换配置');

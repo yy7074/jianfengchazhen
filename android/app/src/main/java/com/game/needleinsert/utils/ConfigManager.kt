@@ -18,6 +18,7 @@ object ConfigManager {
     private const val KEY_MAX_WITHDRAW_AMOUNT = "max_withdraw_amount"
     private const val KEY_COIN_TO_RMB_RATE = "coin_to_rmb_rate"
     private const val KEY_WITHDRAWAL_FEE_RATE = "withdrawal_fee_rate"
+    private const val KEY_DAILY_WITHDRAW_LIMIT = "daily_withdraw_limit"
     private const val KEY_LAST_UPDATE_TIME = "last_update_time"
     
     // 缓存更新间隔（毫秒）- 1小时
@@ -28,6 +29,7 @@ object ConfigManager {
     private const val DEFAULT_MAX_WITHDRAW_AMOUNT = 500.0
     private const val DEFAULT_COIN_TO_RMB_RATE = 33000
     private const val DEFAULT_WITHDRAWAL_FEE_RATE = 0.0
+    private const val DEFAULT_DAILY_WITHDRAW_LIMIT = 1
     
     private var cachedConfig: AppConfig? = null
     
@@ -61,6 +63,14 @@ object ConfigManager {
     suspend fun getWithdrawalFeeRate(context: Context): Double {
         val config = getAppConfig(context)
         return config?.withdrawalFeeRate ?: DEFAULT_WITHDRAWAL_FEE_RATE
+    }
+    
+    /**
+     * 获取每日提现次数限制
+     */
+    suspend fun getDailyWithdrawLimit(context: Context): Int {
+        val config = getAppConfig(context)
+        return config?.dailyWithdrawLimit ?: DEFAULT_DAILY_WITHDRAW_LIMIT
     }
     
     /**
@@ -191,7 +201,8 @@ object ConfigManager {
                 minWithdrawAmount = prefs.getFloat(KEY_MIN_WITHDRAW_AMOUNT, DEFAULT_MIN_WITHDRAW_AMOUNT.toFloat()).toDouble(),
                 maxWithdrawAmount = prefs.getFloat(KEY_MAX_WITHDRAW_AMOUNT, DEFAULT_MAX_WITHDRAW_AMOUNT.toFloat()).toDouble(),
                 coinToRmbRate = prefs.getInt(KEY_COIN_TO_RMB_RATE, DEFAULT_COIN_TO_RMB_RATE),
-                withdrawalFeeRate = prefs.getFloat(KEY_WITHDRAWAL_FEE_RATE, DEFAULT_WITHDRAWAL_FEE_RATE.toFloat()).toDouble()
+                withdrawalFeeRate = prefs.getFloat(KEY_WITHDRAWAL_FEE_RATE, DEFAULT_WITHDRAWAL_FEE_RATE.toFloat()).toDouble(),
+                dailyWithdrawLimit = prefs.getInt(KEY_DAILY_WITHDRAW_LIMIT, DEFAULT_DAILY_WITHDRAW_LIMIT)
             ).also {
                 cachedConfig = it
             }
@@ -212,6 +223,7 @@ object ConfigManager {
                 putFloat(KEY_MAX_WITHDRAW_AMOUNT, config.maxWithdrawAmount.toFloat())
                 putInt(KEY_COIN_TO_RMB_RATE, config.coinToRmbRate)
                 putFloat(KEY_WITHDRAWAL_FEE_RATE, config.withdrawalFeeRate.toFloat())
+                putInt(KEY_DAILY_WITHDRAW_LIMIT, config.dailyWithdrawLimit)
                 putLong(KEY_LAST_UPDATE_TIME, System.currentTimeMillis())
                 apply()
             }

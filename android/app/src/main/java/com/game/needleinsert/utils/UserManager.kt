@@ -75,7 +75,9 @@ object UserManager {
                 val deviceId = getDeviceId(context)
                 val isRegistered = sharedPrefs.getBoolean(KEY_IS_REGISTERED, false)
                 
-                if (isRegistered) {
+                Log.d(TAG, "自动登录开始 - 设备ID: $deviceId, 已注册: $isRegistered")
+                
+                val user = if (isRegistered) {
                     // 尝试登录
                     Log.d(TAG, "尝试登录用户: $deviceId")
                     loginUser(deviceId)
@@ -84,6 +86,21 @@ object UserManager {
                     Log.d(TAG, "注册新用户: $deviceId")
                     registerUser(context, deviceId)
                 }
+                
+                if (user != null) {
+                    Log.d(TAG, "自动登录成功 - 用户ID: ${user.id}, 昵称: ${user.nickname}, 金币: ${user.coins}")
+                    
+                    // 验证用户ID是否有效
+                    if (user.id.isBlank()) {
+                        Log.e(TAG, "警告: 用户ID为空，清除本地数据并重新注册")
+                        logout() // 清除错误的本地数据
+                        return@withContext registerUser(context, deviceId) // 重新注册
+                    }
+                } else {
+                    Log.e(TAG, "自动登录失败，返回null")
+                }
+                
+                return@withContext user
             } catch (e: Exception) {
                 Log.e(TAG, "自动注册或登录失败", e)
                 null
@@ -111,14 +128,19 @@ object UserManager {
                 Log.d(TAG, "注册响应原始数据: $userData")
                 Log.d(TAG, "数据类型: ${userData?.javaClass?.simpleName}")
                 
-                // 直接使用Gson解析的User对象
-                val user = userData ?: User(
-                    id = "0",
-                    deviceId = deviceId,
-                    nickname = nickname,
-                    coins = 100,
-                    level = 1
-                )
+                // 验证返回的用户数据
+                if (userData == null) {
+                    Log.e(TAG, "注册失败: 服务器返回空用户数据")
+                    return null
+                }
+                
+                // 验证用户ID是否有效
+                if (userData.id.isBlank()) {
+                    Log.e(TAG, "注册失败: 服务器返回空用户ID")
+                    return null
+                }
+                
+                val user = userData
                 
                 // 保存用户信息
                 saveUserToPrefs(user)
@@ -149,14 +171,19 @@ object UserManager {
                 val userData = response.body()?.data
                 Log.d(TAG, "登录响应数据: $userData")
                 
-                // 直接使用Gson解析的User对象
-                val user = userData ?: User(
-                    id = "0",
-                    deviceId = deviceId,
-                    nickname = "用户",
-                    coins = 0,
-                    level = 1
-                )
+                // 验证返回的用户数据
+                if (userData == null) {
+                    Log.e(TAG, "登录失败: 服务器返回空用户数据")
+                    return null
+                }
+                
+                // 验证用户ID是否有效
+                if (userData.id.isBlank()) {
+                    Log.e(TAG, "登录失败: 服务器返回空用户ID")
+                    return null
+                }
+                
+                val user = userData
                 
                 // 更新本地用户信息
                 saveUserToPrefs(user)
@@ -257,6 +284,47 @@ object UserManager {
         currentUser = user
         saveUserToPrefs(user)
         Log.d(TAG, "用户信息已更新: ${user.nickname}")
+    }
+
+    /**
+     * 从服务器刷新用户信息
+     */
+    suspend fun refreshUserInfo(): User? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val user = currentUser ?: return@withContext null
+                
+                // 验证用户ID是否有效
+                if (user.id.isBlank()) {
+                    Log.e(TAG, "用户ID为空，无法刷新用户信息")
+                    return@withContext null
+                }
+                
+                Log.d(TAG, "刷新用户信息: ${user.id}")
+                
+                val response = RetrofitClient.getApiService().getUserInfo(user.id)
+                
+                if (response.isSuccessful && response.body()?.code == 200) {
+                    val userData = response.body()?.data
+                    Log.d(TAG, "刷新用户信息成功: $userData")
+                    
+                    // 直接使用Gson解析的User对象
+                    val refreshedUser = userData ?: return@withContext null
+                    
+                    // 更新本地用户信息
+                    updateUserInfo(refreshedUser)
+                    
+                    Log.d(TAG, "用户信息已刷新: ${refreshedUser.nickname}, 金币: ${refreshedUser.coins}")
+                    refreshedUser
+                } else {
+                    Log.e(TAG, "刷新用户信息失败: ${response.body()?.message}")
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "刷新用户信息请求失败", e)
+                null
+            }
+        }
     }
 
     /**

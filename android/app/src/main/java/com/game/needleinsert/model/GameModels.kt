@@ -240,5 +240,6 @@ data class AppConfig(
     @SerializedName("min_withdraw_amount") val minWithdrawAmount: Double,
     @SerializedName("max_withdraw_amount") val maxWithdrawAmount: Double,
     @SerializedName("coin_to_rmb_rate") val coinToRmbRate: Int,
-    @SerializedName("withdrawal_fee_rate") val withdrawalFeeRate: Double
+    @SerializedName("withdrawal_fee_rate") val withdrawalFeeRate: Double,
+    @SerializedName("daily_withdraw_limit") val dailyWithdrawLimit: Int
 ) 

@@ -13,6 +13,9 @@ interface ApiService {
     @POST("api/user/login")
     suspend fun loginUser(@Body request: UserLogin): Response<BaseResponse<User>>
     
+    @GET("api/user/{user_id}")
+    suspend fun getUserInfo(@Path("user_id") userId: String): Response<BaseResponse<User>>
+    
     @GET("api/user/profile")
     suspend fun getUserProfile(@Header("Authorization") token: String): Response<BaseResponse<User>>
     
@@ -31,7 +34,7 @@ interface ApiService {
     
     @POST("api/user/withdraw")
     suspend fun submitWithdrawRequest(
-        @Query("user_id") userId: String,
+        @Query("user_id") userId: Int,
         @Body request: WithdrawRequest
     ): Response<BaseResponse<WithdrawResponse>>
     

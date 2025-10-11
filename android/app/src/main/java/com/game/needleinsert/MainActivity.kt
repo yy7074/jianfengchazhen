@@ -179,12 +179,15 @@ fun MainNavigation() {
     LaunchedEffect(Unit) {
         UserManager.init(context)
         val currentUser = UserManager.getCurrentUser()
-        if (currentUser != null) {
-            // 如果本地有用户信息，加载到ViewModel并跳转主页
+        if (currentUser != null && currentUser.id.isNotBlank()) {
+            // 如果本地有有效的用户信息，加载到ViewModel并跳转主页
             userViewModel.loadUserInfo()
             currentScreen = "menu"
         } else {
-            // 自动尝试注册/登录
+            // 清除无效的本地数据并自动尝试注册/登录
+            if (currentUser != null && currentUser.id.isBlank()) {
+                UserManager.logout() // 清除无效数据
+            }
             userViewModel.autoLogin(context)
         }
     }

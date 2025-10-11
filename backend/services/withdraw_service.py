@@ -54,14 +54,18 @@ class WithdrawService:
             }
         
         # 检查每日提现次数限制
+        daily_limit = int(ConfigService.get_daily_withdraw_limit(db))
         today = date.today()
         today_withdraws = db.query(func.count(WithdrawRequest.id)).filter(
             WithdrawRequest.user_id == user_id,
             func.date(WithdrawRequest.request_time) == today
         ).scalar() or 0
         
-        if today_withdraws >= 1:
-            return {"success": False, "message": "您今天已提现过，请明天再来"}
+        if today_withdraws >= daily_limit:
+            if daily_limit == 1:
+                return {"success": False, "message": "您今天已提现过，请明天再来"}
+            else:
+                return {"success": False, "message": f"您今天已达到提现次数上限({daily_limit}次)，请明天再来"}
         
         # 检查是否有未处理的提现申请
         pending_request = db.query(WithdrawRequest).filter(

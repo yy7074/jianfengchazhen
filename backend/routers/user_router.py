@@ -27,10 +27,13 @@ async def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
             return BaseResponse(
                 message="用户已存在，自动登录",
                 data={
+                    "id": str(existing_user.id),
                     "user_id": existing_user.id,
                     "device_id": existing_user.device_id,
                     "nickname": existing_user.nickname,
-                    "coins": float(existing_user.coins)
+                    "coins": int(existing_user.coins),
+                    "level": existing_user.level,
+                    "experience": existing_user.experience
                 }
             )
         
@@ -39,10 +42,13 @@ async def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
         return BaseResponse(
             message="注册成功",
             data={
+                "id": str(user.id),
                 "user_id": user.id,
                 "device_id": user.device_id,
                 "nickname": user.nickname,
-                "coins": float(user.coins)
+                "coins": int(user.coins),
+                "level": user.level,
+                "experience": user.experience
             }
         )
     except ValueError as e:
@@ -63,18 +69,20 @@ async def login_user(login_data: UserLogin, db: Session = Depends(get_db)):
     return BaseResponse(
         message="登录成功",
         data={
+            "id": str(user.id),
             "user_id": user.id,
             "device_id": user.device_id,
             "nickname": user.nickname,
-            "coins": float(user.coins),
+            "coins": int(user.coins),
             "level": user.level,
             "experience": user.experience
         }
     )
 
+
 @router.get("/info/{user_id}", response_model=BaseResponse)
 async def get_user_info(user_id: int, db: Session = Depends(get_db)):
-    """获取用户信息"""
+    """获取用户详细信息"""
     user = UserService.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -310,6 +318,7 @@ async def get_app_config(db: Session = Depends(get_db)):
             "max_withdraw_amount": ConfigService.get_max_withdraw_amount(db),
             "coin_to_rmb_rate": ConfigService.get_coin_to_rmb_rate(db),
             "withdrawal_fee_rate": ConfigService.get_withdrawal_fee_rate(db),
+            "daily_withdraw_limit": ConfigService.get_daily_withdraw_limit(db),
         }
         
         return BaseResponse(
@@ -362,4 +371,23 @@ async def get_coin_records(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"服务器错误: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"服务器错误: {str(e)}")
+
+@router.get("/{user_id}", response_model=BaseResponse)
+async def get_user_basic_info(user_id: int, db: Session = Depends(get_db)):
+    """获取用户基本信息（用于刷新）"""
+    user = UserService.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    return BaseResponse(
+        message="获取成功",
+        data={
+            "id": str(user.id),
+            "device_id": user.device_id,
+            "nickname": user.nickname,
+            "coins": int(user.coins),
+            "level": user.level,
+            "experience": user.experience
+        }
+    ) 

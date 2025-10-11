@@ -58,24 +58,27 @@ class WithdrawViewModel : ViewModel() {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
                 
-                val currentUser = UserManager.getCurrentUser()
-                if (currentUser != null) {
+                // 从服务器刷新用户信息
+                val refreshedUser = UserManager.refreshUserInfo()
+                if (refreshedUser != null) {
                     // 获取动态兑换比例
                     val coinToRmbRate = loadExchangeRate(context)
-                    val withdrawableAmount = currentUser.coins / coinToRmbRate
+                    val withdrawableAmount = refreshedUser.coins / coinToRmbRate
                     val exchangeRateText = "${coinToRmbRate.toInt()}金币 ≈ ¥1.00"
                     
                     _uiState.value = _uiState.value.copy(
-                        currentCoins = currentUser.coins,
+                        currentCoins = refreshedUser.coins,
                         withdrawableAmount = withdrawableAmount,
                         coinToRmbRate = coinToRmbRate,
                         exchangeRateText = exchangeRateText,
                         isLoading = false
                     )
+                    
+                    Log.d("WithdrawViewModel", "用户信息已刷新: 金币=${refreshedUser.coins}")
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = "用户未登录"
+                        error = "用户未登录或刷新失败"
                     )
                 }
             } catch (e: Exception) {
@@ -218,7 +221,7 @@ class WithdrawViewModel : ViewModel() {
                 )
                 
                 // 调用提现申请API
-                val response = apiService.submitWithdrawRequest(currentUser.id.toString(), requestBody)
+                val response = apiService.submitWithdrawRequest(currentUser.id.toInt(), requestBody)
                 
                 if (!response.isSuccessful) {
                     // 处理HTTP错误（如400, 500等）

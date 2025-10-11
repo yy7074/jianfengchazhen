@@ -95,7 +95,8 @@ class ConfigService:
             ("exchange_rate_enabled", "1", "是否启用动态汇率（1启用，0禁用）"),
             ("exchange_rate_update_interval", "3600", "汇率更新间隔（秒）"),
             ("withdrawal_fee_rate", "0", "提现手续费率（百分比，0表示免费）"),
-            ("withdrawal_min_coins", "1000", "提现最小金币数量")
+            ("withdrawal_min_coins", "1000", "提现最小金币数量"),
+            ("daily_withdraw_limit", "1", "每日提现次数限制")
         ]
         
         for key, value, description in default_configs:
@@ -125,6 +126,11 @@ class ConfigService:
     def get_max_withdraw_amount(db: Session) -> float:
         """获取最大提现金额"""
         return float(ConfigService.get_config(db, "max_withdraw_amount", "500"))
+    
+    @staticmethod
+    def get_daily_withdraw_limit(db: Session) -> int:
+        """获取每日提现次数限制"""
+        return int(ConfigService.get_config(db, "daily_withdraw_limit", "1"))
     
     @staticmethod
     def get_daily_ad_limit(db: Session) -> int:
