@@ -241,8 +241,8 @@ class PageResponse(BaseModel):
 class UserLevelConfigCreate(BaseModel):
     level: int = Field(..., ge=1, le=100, description="用户等级")
     level_name: str = Field(..., max_length=50, description="等级名称")
-    ad_coin_multiplier: Decimal = Field(default=1.00, ge=0.1, le=10.0, description="广告金币倍数")
-    game_coin_multiplier: Decimal = Field(default=1.00, ge=0.1, le=10.0, description="游戏金币倍数")
+    ad_coin_multiplier: Decimal = Field(default=1.00, ge=0.1, description="广告金币倍数")
+    game_coin_multiplier: Decimal = Field(default=1.00, ge=0.1, description="游戏金币倍数")
     min_experience: int = Field(default=0, ge=0, description="该等级所需最小经验值")
     max_experience: Optional[int] = Field(None, ge=0, description="该等级最大经验值")
     description: Optional[str] = Field(None, description="等级描述")
@@ -250,8 +250,8 @@ class UserLevelConfigCreate(BaseModel):
 
 class UserLevelConfigUpdate(BaseModel):
     level_name: Optional[str] = Field(None, max_length=50, description="等级名称")
-    ad_coin_multiplier: Optional[Decimal] = Field(None, ge=0.1, le=10.0, description="广告金币倍数")
-    game_coin_multiplier: Optional[Decimal] = Field(None, ge=0.1, le=10.0, description="游戏金币倍数")
+    ad_coin_multiplier: Optional[Decimal] = Field(None, ge=0.1, description="广告金币倍数")
+    game_coin_multiplier: Optional[Decimal] = Field(None, ge=0.1, description="游戏金币倍数")
     min_experience: Optional[int] = Field(None, ge=0, description="该等级所需最小经验值")
     max_experience: Optional[int] = Field(None, ge=0, description="该等级最大经验值")
     description: Optional[str] = Field(None, description="等级描述")

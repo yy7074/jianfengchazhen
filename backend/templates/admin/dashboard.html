@@ -2851,27 +2851,37 @@
             document.getElementById('levelModalTitle').textContent = '编辑等级';
             document.getElementById('levelId').value = levelId;
             
-            // 加载等级数据
-            fetch(`/admin/api/levels/${levelId}`)
+            // 从已有的等级列表中查找数据（避免额外的API调用）
+            const levelsList = document.querySelectorAll('#levelsTableBody tr');
+            const currentLevels = [];
+            
+            // 先尝试从页面缓存的数据中获取
+            fetch('/admin/api/levels')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.code === 200) {
-                        const level = data.data;
-                        document.getElementById('levelNumber').value = level.level;
-                        document.getElementById('levelName').value = level.level_name;
-                        document.getElementById('adCoinMultiplier').value = level.ad_coin_multiplier;
-                        document.getElementById('gameCoinMultiplier').value = level.game_coin_multiplier;
-                        document.getElementById('minExperience').value = level.min_experience;
-                        document.getElementById('maxExperience').value = level.max_experience || '';
-                        document.getElementById('levelDescription').value = level.description || '';
-                        document.getElementById('levelIsActive').checked = level.is_active === 1;
-                        
-                        document.getElementById('levelModal').style.display = 'flex';
+                    if (data.code === 200 && data.data) {
+                        const level = data.data.find(l => l.id === levelId);
+                        if (level) {
+                            document.getElementById('levelNumber').value = level.level;
+                            document.getElementById('levelName').value = level.level_name;
+                            document.getElementById('adCoinMultiplier').value = level.ad_coin_multiplier;
+                            document.getElementById('gameCoinMultiplier').value = level.game_coin_multiplier;
+                            document.getElementById('minExperience').value = level.min_experience;
+                            document.getElementById('maxExperience').value = level.max_experience || '';
+                            document.getElementById('levelDescription').value = level.description || '';
+                            document.getElementById('levelIsActive').checked = level.is_active === 1 || level.is_active === true;
+                            
+                            document.getElementById('levelModal').style.display = 'flex';
+                        } else {
+                            alert('未找到等级数据');
+                        }
+                    } else {
+                        alert('加载等级数据失败: ' + (data.message || '未知错误'));
                     }
                 })
                 .catch(error => {
                     console.error('加载等级数据失败:', error);
-                    alert('加载等级数据失败');
+                    alert('加载等级数据失败: ' + error.message);
                 });
         }
         
@@ -3427,11 +3437,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>广告金币倍数</label>
-                            <input type="number" id="adCoinMultiplier" step="0.01" min="0.1" max="10" value="1.00" required>
+                            <input type="number" id="adCoinMultiplier" step="0.01" min="0.1" value="1.00" required>
                         </div>
                         <div class="form-group">
                             <label>游戏金币倍数</label>
-                            <input type="number" id="gameCoinMultiplier" step="0.01" min="0.1" max="10" value="1.00" required>
+                            <input type="number" id="gameCoinMultiplier" step="0.01" min="0.1" value="1.00" required>
                         </div>
                     </div>
                     <div class="form-row">
