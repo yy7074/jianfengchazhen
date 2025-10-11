@@ -19,6 +19,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import com.game.needleinsert.utils.ConfigManager
 import com.game.needleinsert.viewmodel.WithdrawViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,11 +30,26 @@ fun WithdrawScreen(
     onBack: () -> Unit,
     viewModel: WithdrawViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     
+    // 应用配置状态（与后端保持一致）
+    var minWithdrawAmount by remember { mutableStateOf(10.0) }
+    var maxWithdrawAmount by remember { mutableStateOf(500.0) }
+    var coinToRmbRate by remember { mutableStateOf(33000) }
+    
     LaunchedEffect(Unit) {
-        viewModel.loadUserInfo()
+        viewModel.loadUserInfo(context)
         viewModel.loadWithdrawHistory()
+        
+        // 加载配置
+        try {
+            minWithdrawAmount = ConfigManager.getMinWithdrawAmount(context)
+            maxWithdrawAmount = ConfigManager.getMaxWithdrawAmount(context)
+            coinToRmbRate = ConfigManager.getCoinToRmbRate(context)
+        } catch (e: Exception) {
+            // 使用默认值
+        }
     }
 
     Column(
@@ -94,16 +112,21 @@ fun WithdrawScreen(
                     onAlipayAccountChange = { viewModel.updateAlipayAccount(it) },
                     realName = uiState.realName,
                     onRealNameChange = { viewModel.updateRealName(it) },
-                    onSubmit = { viewModel.submitWithdrawRequest() },
+                    onSubmit = { viewModel.submitWithdrawRequest(context) },
                     isLoading = uiState.isSubmitting,
                     canSubmit = uiState.canSubmit,
-                    withdrawableAmount = uiState.withdrawableAmount
+                    withdrawableAmount = uiState.withdrawableAmount,
+                    minWithdrawAmount = minWithdrawAmount,
+                    maxWithdrawAmount = maxWithdrawAmount
                 )
             }
             
             // 提现规则说明
             item {
-                WithdrawRulesCard()
+                WithdrawRulesCard(
+                    minWithdrawAmount = minWithdrawAmount,
+                    maxWithdrawAmount = maxWithdrawAmount
+                )
             }
             
             // 提现历史
@@ -236,7 +259,9 @@ fun WithdrawRequestCard(
     onSubmit: () -> Unit,
     isLoading: Boolean,
     canSubmit: Boolean,
-    withdrawableAmount: Double
+    withdrawableAmount: Double,
+    minWithdrawAmount: Double,
+    maxWithdrawAmount: Double
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -276,7 +301,14 @@ fun WithdrawRequestCard(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             
-            val withdrawOptions = listOf(0.5, 15.0, 30.0)
+            val withdrawOptions: List<Double> = listOf<Double>(
+                minWithdrawAmount,
+                minWithdrawAmount * 2,
+                minWithdrawAmount * 5
+            ).filter { it <= maxWithdrawAmount }.map { 
+                // 转换为整数金额（如果是整数的话）
+                if (it == it.toInt().toDouble()) it.toInt().toDouble() else it
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -301,10 +333,76 @@ fun WithdrawRequestCard(
                         ),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("¥$amount")
+                        Text(
+                            if (amount == amount.toInt().toDouble()) {
+                                "¥${amount.toInt()}"
+                            } else {
+                                "¥$amount"
+                            }
+                        )
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 自定义金额输入
+            Text(
+                "或输入自定义金额",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Gray,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            OutlinedTextField(
+                value = selectedAmount?.toString() ?: "",
+                onValueChange = { input ->
+                    if (input.isEmpty()) {
+                        onAmountSelect(0.0) // 清空选择
+                    } else {
+                        val amount = input.toDoubleOrNull()
+                        if (amount != null) {
+                            onAmountSelect(amount)
+                        }
+                    }
+                },
+                label = { Text("自定义提现金额") },
+                placeholder = { Text("¥${String.format("%.1f", minWithdrawAmount)} - ¥${String.format("%.0f", maxWithdrawAmount)}") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF2a5298),
+                    focusedLabelColor = Color(0xFF2a5298),
+                    cursorColor = Color(0xFF2a5298)
+                ),
+                supportingText = {
+                    if (selectedAmount != null && selectedAmount > 0) {
+                        if (selectedAmount < minWithdrawAmount) {
+                            Text(
+                                "最小提现金额为¥${String.format("%.1f", minWithdrawAmount)}",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else if (selectedAmount > maxWithdrawAmount) {
+                            Text(
+                                "最大提现金额为¥${String.format("%.0f", maxWithdrawAmount)}",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else if (selectedAmount > withdrawableAmount) {
+                            Text(
+                                "超过可提现余额¥${String.format("%.2f", withdrawableAmount)}",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else {
+                            Text(
+                                "已选择提现金额¥${String.format("%.2f", selectedAmount)}",
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -365,7 +463,10 @@ fun WithdrawRequestCard(
 }
 
 @Composable
-fun WithdrawRulesCard() {
+fun WithdrawRulesCard(
+    minWithdrawAmount: Double,
+    maxWithdrawAmount: Double
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -396,7 +497,7 @@ fun WithdrawRulesCard() {
             }
             
             val rules = listOf(
-                "提现金额：¥0.5、¥15、¥30三个固定选项",
+                "提现金额：¥${String.format("%.1f", minWithdrawAmount)}起，最高¥${String.format("%.0f", maxWithdrawAmount)}",
                 "每天只能提现一次",
                 "工作日1-3个工作日到账"
             )

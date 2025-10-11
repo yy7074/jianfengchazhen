@@ -6,7 +6,12 @@ from schemas import *
 from models import GameRecord, AdWatchRecord, CoinTransaction as CoinTransactionModel, WithdrawRequest as WithdrawRequestModel
 from services.user_service import UserService
 from services.ad_service import AdService
+from services.config_service import ConfigService
+from services.withdraw_service import WithdrawService
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -163,8 +168,6 @@ async def submit_withdraw_request(
     db: Session = Depends(get_db)
 ):
     """提交提现申请"""
-    from services.withdraw_service import WithdrawService
-    
     try:
         result = WithdrawService.submit_withdraw_request(db, user_id, withdraw_data)
         if result["success"]:
@@ -297,6 +300,26 @@ async def get_user_withdraw_history(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="获取提现历史失败")
+
+@router.get("/app-config")
+async def get_app_config(db: Session = Depends(get_db)):
+    """获取应用配置信息（供客户端使用）"""
+    try:
+        config_data = {
+            "min_withdraw_amount": ConfigService.get_min_withdraw_amount(db),
+            "max_withdraw_amount": ConfigService.get_max_withdraw_amount(db),
+            "coin_to_rmb_rate": ConfigService.get_coin_to_rmb_rate(db),
+            "withdrawal_fee_rate": ConfigService.get_withdrawal_fee_rate(db),
+        }
+        
+        return BaseResponse(
+            message="获取应用配置成功",
+            data=config_data
+        )
+        
+    except Exception as e:
+        logger.error(f"获取应用配置失败: {e}")
+        raise HTTPException(status_code=500, detail="获取应用配置失败")
 
 @router.get("/{user_id}/coin-records", response_model=BaseResponse)
 async def get_coin_records(

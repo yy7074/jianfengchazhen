@@ -52,7 +52,8 @@ object AppConfig {
     object Game {
         // 游戏相关配置可以添加在这里
         const val DEFAULT_COINS_PER_AD = 10
-        const val MIN_WITHDRAWAL_AMOUNT = 100
+        // 最小提现金额现在从后端获取，不再硬编码
+        // const val MIN_WITHDRAWAL_AMOUNT = 100
     }
     
     /**

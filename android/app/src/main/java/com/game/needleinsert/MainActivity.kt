@@ -679,11 +679,14 @@ fun UserInfoCard(
                                     fontWeight = FontWeight.Bold,
                                     color = GameColors.Primary
                                 )
+                                // 等级信息已隐藏
+                                /*
                                 Text(
                                     text = "等级 ${user.level}",
                                     fontSize = 12.sp,
                                     color = GameColors.TextSecondary
                                 )
+                                */
                             }
                         }
                         

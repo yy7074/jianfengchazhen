@@ -272,11 +272,14 @@ private fun UserInfoCard(
             
             Spacer(modifier = Modifier.height(5.dp))
             
+            // 等级信息已隐藏
+            /*
             Text(
                 text = "等级 ${user.level}",
                 fontSize = 14.sp,
                 color = GameColors.TextSecondary
             )
+            */
             
             Spacer(modifier = Modifier.height(30.dp))
             
@@ -309,11 +312,13 @@ private fun UserInfoCard(
                     )
                 }
                 
-                // 第二行：等级和设备信息
+                // 第二行：设备信息（等级已隐藏）
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
+                    // 等级信息已隐藏
+                    /*
                     StatCard(
                         icon = "⭐",
                         title = "等级",
@@ -323,6 +328,7 @@ private fun UserInfoCard(
                     )
                     
                     Spacer(modifier = Modifier.width(10.dp))
+                    */
                     
                     StatCard(
                         icon = "📱",

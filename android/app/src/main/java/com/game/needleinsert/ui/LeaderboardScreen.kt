@@ -271,7 +271,7 @@ fun LeaderboardItem(
                 }
                 
                 Text(
-                    text = "等级 ${player.level} • ${player.gameCount} 局游戏",
+                    text = "${player.gameCount} 局游戏",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )

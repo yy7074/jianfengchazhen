@@ -25,6 +25,10 @@ interface ApiService {
     @GET("api/user/{user_id}/withdraws")
     suspend fun getWithdrawHistory(@Path("user_id") userId: String): Response<BaseResponse<List<Map<String, Any>>>>
     
+    // 获取应用配置
+    @GET("api/user/app-config")
+    suspend fun getAppConfig(): Response<BaseResponse<AppConfig>>
+    
     @POST("api/user/withdraw")
     suspend fun submitWithdrawRequest(
         @Query("user_id") userId: String,

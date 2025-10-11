@@ -1,10 +1,12 @@
 package com.game.needleinsert.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.game.needleinsert.model.WithdrawRequest
 import com.game.needleinsert.network.RetrofitClient
+import com.game.needleinsert.utils.ConfigManager
 import com.game.needleinsert.utils.UserManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +53,7 @@ class WithdrawViewModel : ViewModel() {
         val alipayAccount: String
     )
     
-    fun loadUserInfo() {
+    fun loadUserInfo(context: Context) {
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
@@ -59,7 +61,7 @@ class WithdrawViewModel : ViewModel() {
                 val currentUser = UserManager.getCurrentUser()
                 if (currentUser != null) {
                     // 获取动态兑换比例
-                    val coinToRmbRate = loadExchangeRate()
+                    val coinToRmbRate = loadExchangeRate(context)
                     val withdrawableAmount = currentUser.coins / coinToRmbRate
                     val exchangeRateText = "${coinToRmbRate.toInt()}金币 ≈ ¥1.00"
                     
@@ -86,19 +88,12 @@ class WithdrawViewModel : ViewModel() {
         }
     }
     
-    private suspend fun loadExchangeRate(): Double {
+    private suspend fun loadExchangeRate(context: Context): Double {
         return try {
-            val response = apiService.getSystemConfig("coin_to_rmb_rate")
-            if (response.isSuccessful && response.body()?.code == 200) {
-                val configValue = response.body()?.data?.get("config_value") as? String
-                configValue?.toDoubleOrNull() ?: 33000.0
-            } else {
-                Log.w("WithdrawViewModel", "获取兑换比例失败，使用默认值")
-                33000.0
-            }
+            ConfigManager.getCoinToRmbRate(context).toDouble()
         } catch (e: Exception) {
             Log.e("WithdrawViewModel", "获取兑换比例异常，使用默认值", e)
-            33000.0
+            3300.0
         }
     }
     
@@ -172,7 +167,7 @@ class WithdrawViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(message = null)
     }
     
-    fun submitWithdrawRequest() {
+    fun submitWithdrawRequest(context: Context) {
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isSubmitting = true, message = null, error = null)
@@ -195,12 +190,14 @@ class WithdrawViewModel : ViewModel() {
                     return@launch
                 }
                 
-                // 验证金额是否为有效选项
-                val validAmounts = listOf(0.5, 15.0, 30.0)
-                if (amount !in validAmounts) {
+                // 验证金额范围
+                val minAmount = ConfigManager.getMinWithdrawAmount(context)
+                val maxAmount = ConfigManager.getMaxWithdrawAmount(context)
+                
+                if (amount < minAmount || amount > maxAmount) {
                     _uiState.value = _uiState.value.copy(
                         isSubmitting = false,
-                        error = "无效的提现金额"
+                        error = "提现金额必须在¥${String.format("%.1f", minAmount)} - ¥${String.format("%.0f", maxAmount)}之间"
                     )
                     return@launch
                 }
@@ -263,7 +260,7 @@ class WithdrawViewModel : ViewModel() {
                 )
                 
                 // 重新加载用户信息和提现历史
-                loadUserInfo()
+                loadUserInfo(context)
                 loadWithdrawHistory()
                 
             } catch (e: Exception) {

@@ -162,7 +162,8 @@ fun UserInfoCard(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 InfoRow("用户ID", userInfo.id)
                 InfoRow("昵称", userInfo.nickname)
-                InfoRow("等级", "Lv.${userInfo.level}")
+                // 等级信息已隐藏
+                // InfoRow("等级", "Lv.${userInfo.level}")
                 InfoRow("金币余额", "${userInfo.coins} 枚")
             }
         } else {

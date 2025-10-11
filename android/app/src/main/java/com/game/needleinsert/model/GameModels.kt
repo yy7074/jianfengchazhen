@@ -233,4 +233,12 @@ data class VersionCheckResponse(
     @SerializedName("has_update") val hasUpdate: Boolean,
     @SerializedName("is_force_update") val isForceUpdate: Boolean,
     @SerializedName("latest_version") val latestVersion: AppVersionInfo?
+)
+
+// 应用配置数据类
+data class AppConfig(
+    @SerializedName("min_withdraw_amount") val minWithdrawAmount: Double,
+    @SerializedName("max_withdraw_amount") val maxWithdrawAmount: Double,
+    @SerializedName("coin_to_rmb_rate") val coinToRmbRate: Int,
+    @SerializedName("withdrawal_fee_rate") val withdrawalFeeRate: Double
 ) 
