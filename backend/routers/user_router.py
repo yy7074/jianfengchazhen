@@ -384,6 +384,7 @@ async def get_user_basic_info(user_id: int, db: Session = Depends(get_db)):
         message="获取成功",
         data={
             "id": str(user.id),
+            "user_id": user.id,  # 添加user_id字段，确保Android端可以正确解析
             "device_id": user.device_id,
             "nickname": user.nickname,
             "coins": int(user.coins),

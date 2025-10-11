@@ -56,7 +56,9 @@ class WithdrawViewModel : ViewModel() {
     fun loadUserInfo(context: Context) {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                // 安全地更新状态，避免ClassCastException
+                val currentState = _uiState.value
+                _uiState.value = currentState.copy(isLoading = true, error = null)
                 
                 // 从服务器刷新用户信息
                 val refreshedUser = UserManager.refreshUserInfo()
@@ -66,27 +68,39 @@ class WithdrawViewModel : ViewModel() {
                     val withdrawableAmount = refreshedUser.coins / coinToRmbRate
                     val exchangeRateText = "${coinToRmbRate.toInt()}金币 ≈ ¥1.00"
                     
-                    _uiState.value = _uiState.value.copy(
+                    // 创建新的状态对象，避免类型转换问题
+                    val newState = WithdrawUiState(
+                        isLoading = false,
+                        isSubmitting = currentState.isSubmitting,
                         currentCoins = refreshedUser.coins,
                         withdrawableAmount = withdrawableAmount,
+                        selectedAmount = currentState.selectedAmount,
+                        alipayAccount = currentState.alipayAccount,
+                        realName = currentState.realName,
+                        withdrawHistory = currentState.withdrawHistory,
+                        message = currentState.message,
+                        error = null,
                         coinToRmbRate = coinToRmbRate,
-                        exchangeRateText = exchangeRateText,
-                        isLoading = false
+                        exchangeRateText = exchangeRateText
                     )
+                    _uiState.value = newState
                     
                     Log.d("WithdrawViewModel", "用户信息已刷新: 金币=${refreshedUser.coins}")
                 } else {
-                    _uiState.value = _uiState.value.copy(
+                    val newState = currentState.copy(
                         isLoading = false,
                         error = "用户未登录或刷新失败"
                     )
+                    _uiState.value = newState
                 }
             } catch (e: Exception) {
                 Log.e("WithdrawViewModel", "加载用户信息失败", e)
-                _uiState.value = _uiState.value.copy(
+                val currentState = _uiState.value
+                val newState = currentState.copy(
                     isLoading = false,
                     error = "加载失败: ${e.message}"
                 )
+                _uiState.value = newState
             }
         }
     }
@@ -151,23 +165,48 @@ class WithdrawViewModel : ViewModel() {
     }
     
     fun selectWithdrawAmount(amount: Double) {
-        _uiState.value = _uiState.value.copy(selectedAmount = amount)
+        try {
+            val currentState = _uiState.value
+            _uiState.value = currentState.copy(selectedAmount = amount)
+        } catch (e: Exception) {
+            Log.e("WithdrawViewModel", "更新选择金额失败", e)
+        }
     }
     
     fun updateAlipayAccount(account: String) {
-        _uiState.value = _uiState.value.copy(alipayAccount = account)
+        try {
+            val currentState = _uiState.value
+            _uiState.value = currentState.copy(alipayAccount = account)
+        } catch (e: Exception) {
+            Log.e("WithdrawViewModel", "更新支付宝账号失败", e)
+        }
     }
     
     fun updateRealName(name: String) {
-        _uiState.value = _uiState.value.copy(realName = name)
+        try {
+            val currentState = _uiState.value
+            _uiState.value = currentState.copy(realName = name)
+        } catch (e: Exception) {
+            Log.e("WithdrawViewModel", "更新真实姓名失败", e)
+        }
     }
     
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        try {
+            val currentState = _uiState.value
+            _uiState.value = currentState.copy(error = null)
+        } catch (e: Exception) {
+            Log.e("WithdrawViewModel", "清除错误信息失败", e)
+        }
     }
     
     fun clearMessage() {
-        _uiState.value = _uiState.value.copy(message = null)
+        try {
+            val currentState = _uiState.value
+            _uiState.value = currentState.copy(message = null)
+        } catch (e: Exception) {
+            Log.e("WithdrawViewModel", "清除消息失败", e)
+        }
     }
     
     fun submitWithdrawRequest(context: Context) {
@@ -220,8 +259,27 @@ class WithdrawViewModel : ViewModel() {
                     realName = _uiState.value.realName
                 )
                 
-                // 调用提现申请API
-                val response = apiService.submitWithdrawRequest(currentUser.id.toInt(), requestBody)
+                // 调用提现申请API - 安全地转换用户ID
+                val userId = try {
+                    if (currentUser.id.isBlank()) {
+                        Log.e("WithdrawViewModel", "用户ID为空")
+                        _uiState.value = _uiState.value.copy(
+                            isSubmitting = false,
+                            error = "用户ID无效，请重新登录"
+                        )
+                        return@launch
+                    }
+                    currentUser.id.toInt()
+                } catch (e: NumberFormatException) {
+                    Log.e("WithdrawViewModel", "用户ID格式错误: ${currentUser.id}", e)
+                    _uiState.value = _uiState.value.copy(
+                        isSubmitting = false,
+                        error = "用户ID格式错误，请重新登录"
+                    )
+                    return@launch
+                }
+                
+                val response = apiService.submitWithdrawRequest(userId, requestBody)
                 
                 if (!response.isSuccessful) {
                     // 处理HTTP错误（如400, 500等）

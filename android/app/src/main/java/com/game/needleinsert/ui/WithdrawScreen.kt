@@ -374,14 +374,22 @@ fun WithdrawRequestCard(
             )
             
             OutlinedTextField(
-                value = selectedAmount?.toString() ?: "",
+                value = selectedAmount?.let { 
+                    if (it == 0.0) "" else it.toString() 
+                } ?: "",
                 onValueChange = { input ->
-                    if (input.isEmpty()) {
+                    if (input.isEmpty() || input.isBlank()) {
                         onAmountSelect(0.0) // 清空选择
                     } else {
-                        val amount = input.toDoubleOrNull()
-                        if (amount != null) {
-                            onAmountSelect(amount)
+                        // 安全地解析输入的金额
+                        try {
+                            val amount = input.toDoubleOrNull()
+                            if (amount != null && amount >= 0) {
+                                onAmountSelect(amount)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("WithdrawScreen", "解析金额输入失败: $input", e)
+                            // 不更新金额，保持当前状态
                         }
                     }
                 },
@@ -660,9 +668,9 @@ fun WithdrawHistoryItem(record: WithdrawViewModel.WithdrawRecord) {
 @Composable
 fun WithdrawStatusBadge(status: String) {
     val (color, text) = when (status.lowercase()) {
-        "pending" -> Color(0xFFFFA726) to "待处理"
-        "approved" -> Color(0xFF42A5F5) to "已批准"
-        "completed" -> Color(0xFF66BB6A) to "已完成"
+        "pending" -> Color(0xFFFFA726) to "审核中"
+        "approved" -> Color(0xFF66BB6A) to "已打款"
+        "completed" -> Color(0xFF66BB6A) to "已打款"
         "rejected" -> Color(0xFFEF5350) to "已拒绝"
         else -> Color.Gray to "未知($status)"
     }

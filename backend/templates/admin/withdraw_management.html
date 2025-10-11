@@ -392,11 +392,11 @@
         <!-- 统计概览 -->
         <div class="stats-grid">
             <div class="stat-card">
-                <h3>待审核</h3>
+                <h3>审核中</h3>
                 <div class="number pending" id="pendingCount">-</div>
             </div>
             <div class="stat-card">
-                <h3>已批准</h3>
+                <h3>已打款</h3>
                 <div class="number approved" id="approvedCount">-</div>
             </div>
             <div class="stat-card">
@@ -416,8 +416,8 @@
                     <label>状态筛选</label>
                     <select id="statusFilter">
                         <option value="">全部状态</option>
-                        <option value="pending">待审核</option>
-                        <option value="approved">已批准</option>
+                        <option value="pending">审核中</option>
+                        <option value="approved">已打款</option>
                         <option value="rejected">已拒绝</option>
                     </select>
                 </div>
@@ -556,10 +556,10 @@
                                 📋 详情
                             </button>
                             ${item.status === 'pending' ? `
-                                <button class="btn btn-success" onclick="approveWithdraw(${item.id})" title="批准">
-                                    ✅ 批准
+                                <button class="btn btn-success" onclick="approveWithdraw(${item.id})" title="批准打款">
+                                    ✅ 打款
                                 </button>
-                                <button class="btn btn-danger" onclick="rejectWithdraw(${item.id})" title="拒绝">
+                                <button class="btn btn-danger" onclick="rejectWithdraw(${item.id})" title="拒绝申请">
                                     ❌ 拒绝
                                 </button>
                             ` : ''}
@@ -762,7 +762,7 @@
                         <textarea id="reviewNote" placeholder="请输入审核备注..."></textarea>
                     </div>
                     <div class="form-actions">
-                        <button class="btn btn-success" onclick="quickApprove(${withdraw.id})">✅ 批准申请</button>
+                        <button class="btn btn-success" onclick="quickApprove(${withdraw.id})">✅ 批准打款</button>
                         <button class="btn btn-danger" onclick="quickReject(${withdraw.id})">❌ 拒绝申请</button>
                     </div>
                 </div>
@@ -816,7 +816,7 @@
                 const result = await response.json();
 
                 if (result.code === 200) {
-                    alert(action === 'approve' ? '✅ 申请已批准' : '❌ 申请已拒绝');
+                    alert(action === 'approve' ? '✅ 已批准打款' : '❌ 申请已拒绝');
                     loadWithdraws(currentPage);
                     updateStats();
                 } else {
@@ -835,10 +835,10 @@
         // 状态文本转换
         function getStatusText(status) {
             const statusMap = {
-                'pending': '待审核',
-                'approved': '已批准',
+                'pending': '审核中',
+                'approved': '已打款',
                 'rejected': '已拒绝',
-                'completed': '已完成'
+                'completed': '已打款'
             };
             return statusMap[status] || status;
         }
