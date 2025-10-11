@@ -347,9 +347,12 @@ fun MainNavigation() {
         "settings" -> SettingsScreen(
             onBack = { currentScreen = "menu" }
         )
+        // 排行榜功能已移除
+        /*
         "leaderboard" -> LeaderboardScreen(
             onBack = { currentScreen = "menu" }
         )
+        */
         "withdraw" -> WithdrawScreen(
             onBack = { currentScreen = "menu" }
         )
@@ -483,6 +486,8 @@ fun MainMenuScreen(
             
             Spacer(modifier = Modifier.height(20.dp))
             
+            // 排行榜功能已移除
+            /*
             AnimatedMenuButton(
                 text = "🏆 排行榜",
                 onClick = onLeaderboard,
@@ -490,6 +495,7 @@ fun MainMenuScreen(
             )
             
             Spacer(modifier = Modifier.height(20.dp))
+            */
             
             AnimatedMenuButton(
                 text = "💰 提现",

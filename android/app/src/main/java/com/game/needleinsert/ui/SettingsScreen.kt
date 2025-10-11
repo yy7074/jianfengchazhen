@@ -42,8 +42,9 @@ fun SettingsScreen(
     
     LaunchedEffect(Unit) {
         viewModel.loadUserInfo()
-        viewModel.loadUserStats()
-        viewModel.loadWithdrawHistory()
+        // 游戏统计和提现历史已移除
+        // viewModel.loadUserStats()
+        // viewModel.loadWithdrawHistory()
     }
 
     Column(
@@ -101,13 +102,15 @@ fun SettingsScreen(
                 DeviceInfoCard()
             }
             
-            // 游戏统计卡片
+            // 游戏统计卡片已移除
+            /*
             item {
                 GameStatsCard(
                     gameStats = uiState.gameStats,
                     isLoading = uiState.isLoading
                 )
             }
+            */
             
             // 金币获取记录卡片
             item {
@@ -117,13 +120,15 @@ fun SettingsScreen(
                 )
             }
             
-            // 提现历史卡片
+            // 提现历史卡片已移除
+            /*
             item {
                 WithdrawHistoryCard(
                     withdrawHistory = uiState.withdrawHistory,
                     isLoading = uiState.isLoading
                 )
             }
+            */
             
             // 版本信息
             item {

@@ -288,10 +288,10 @@ private fun UserInfoCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
-                // 第一行：金币和最高分
+                // 第一行：金币（游戏统计已移除）
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     StatCard(
                         icon = "💰",
@@ -301,6 +301,8 @@ private fun UserInfoCard(
                         modifier = Modifier.weight(1f)
                     )
                     
+                    // 游戏统计已移除
+                    /*
                     Spacer(modifier = Modifier.width(10.dp))
                     
                     StatCard(
@@ -310,6 +312,7 @@ private fun UserInfoCard(
                         color = GameColors.AccentPink,
                         modifier = Modifier.weight(1f)
                     )
+                    */
                 }
                 
                 // 第二行：设备信息（等级已隐藏）
