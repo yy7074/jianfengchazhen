@@ -38,7 +38,12 @@ object AppConfig {
     object AppInfo {
         const val APP_NAME = "见缝插针"
         const val VERSION = "1.0.0"
+        const val VERSION_CODE = 1
         const val BUILD_TYPE = "debug" // "debug" or "release"
+        
+        // 版本更新相关配置
+        const val AUTO_CHECK_UPDATE = true // 是否自动检查更新
+        const val UPDATE_CHECK_INTERVAL = 24 * 60 * 60 * 1000L // 更新检查间隔（毫秒）
     }
     
     /**

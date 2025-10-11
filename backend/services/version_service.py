@@ -148,10 +148,30 @@ class VersionService:
                 else:
                     is_force_update = latest_version.is_force_update == 1
             
+            # 转换为Pydantic模型以便序列化
+            latest_version_info = None
+            if has_update and latest_version:
+                latest_version_info = {
+                    "id": latest_version.id,
+                    "version_name": latest_version.version_name,
+                    "version_code": latest_version.version_code,
+                    "platform": latest_version.platform,
+                    "download_url": latest_version.download_url,
+                    "file_size": latest_version.file_size,
+                    "file_name": latest_version.file_name,
+                    "update_content": latest_version.update_content,
+                    "is_force_update": latest_version.is_force_update,
+                    "min_support_version": latest_version.min_support_version,
+                    "status": latest_version.status.value if latest_version.status else None,
+                    "publish_time": latest_version.publish_time.isoformat() if latest_version.publish_time else None,
+                    "created_time": latest_version.created_time.isoformat() if latest_version.created_time else None,
+                    "updated_time": latest_version.updated_time.isoformat() if latest_version.updated_time else None
+                }
+            
             return {
                 "has_update": has_update,
                 "is_force_update": is_force_update,
-                "latest_version": latest_version if has_update else None
+                "latest_version": latest_version_info
             }
             
         except Exception as e:

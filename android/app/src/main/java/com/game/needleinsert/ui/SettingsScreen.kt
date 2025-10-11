@@ -21,9 +21,15 @@ import android.os.Build
 import android.provider.Settings
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.game.needleinsert.utils.UserManager
+import com.game.needleinsert.utils.VersionManager
+import com.game.needleinsert.utils.ApkInstaller
+import com.game.needleinsert.ui.components.UpdateDialog
 import com.game.needleinsert.viewmodel.SettingsViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,6 +123,11 @@ fun SettingsScreen(
                     withdrawHistory = uiState.withdrawHistory,
                     isLoading = uiState.isLoading
                 )
+            }
+            
+            // 版本信息
+            item {
+                VersionInfoCard()
             }
             
             // 其他设置
@@ -464,5 +475,141 @@ fun SettingsButton(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(text)
+    }
+}
+
+@Composable
+fun VersionInfoCard() {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    // 版本更新状态
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var updateVersionInfo by remember { mutableStateOf<com.game.needleinsert.model.AppVersionInfo?>(null) }
+    var isForceUpdate by remember { mutableStateOf(false) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var updateMessage by remember { mutableStateOf("") }
+    
+    // 获取当前版本信息
+    val (currentVersionName, currentVersionCode) = VersionManager.getCurrentVersionInfo(context)
+    
+    SettingsCard(
+        title = "版本信息",
+        icon = Icons.Default.Info
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // 当前版本信息
+            InfoRow("应用名称", "见缝插针")
+            InfoRow("当前版本", "v$currentVersionName")
+            InfoRow("版本号", currentVersionCode.toString())
+            InfoRow("系统版本", "Android ${Build.VERSION.RELEASE}")
+            InfoRow("设备型号", "${Build.MANUFACTURER} ${Build.MODEL}")
+            
+            // 更新状态显示
+            if (updateMessage.isNotEmpty()) {
+                Text(
+                    text = updateMessage,
+                    fontSize = 12.sp,
+                    color = if (updateMessage.contains("最新")) Color.Green else Color.Blue,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+            
+            // 检查更新按钮
+            SettingsButton(
+                text = if (isCheckingUpdate) "检查中..." else "检查更新",
+                icon = Icons.Default.Refresh,
+                onClick = {
+                    if (!isCheckingUpdate) {
+                        isCheckingUpdate = true
+                        updateMessage = ""
+                        
+                        coroutineScope.launch {
+                            try {
+                                Log.d("VersionCheck", "手动检查版本更新...")
+                                val versionCheckResult = VersionManager.checkVersionUpdate(context)
+                                
+                                versionCheckResult?.let { result ->
+                                    if (result.hasUpdate && result.latestVersion != null) {
+                                        Log.d("VersionCheck", "发现新版本: ${result.latestVersion.versionName}")
+                                        updateVersionInfo = result.latestVersion
+                                        isForceUpdate = result.isForceUpdate
+                                        showUpdateDialog = true
+                                        updateMessage = "发现新版本 v${result.latestVersion.versionName}"
+                                    } else {
+                                        Log.d("VersionCheck", "当前已是最新版本")
+                                        updateMessage = "当前已是最新版本"
+                                    }
+                                } ?: run {
+                                    updateMessage = "检查更新失败，请稍后重试"
+                                }
+                            } catch (e: Exception) {
+                                Log.e("VersionCheck", "版本检查失败", e)
+                                updateMessage = "检查更新失败: ${e.message}"
+                            } finally {
+                                isCheckingUpdate = false
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    }
+    
+    // 显示版本更新对话框
+    if (showUpdateDialog && updateVersionInfo != null) {
+        UpdateDialog(
+            versionInfo = updateVersionInfo!!,
+            isForceUpdate = isForceUpdate,
+            onDownload = {
+                coroutineScope.launch {
+                    try {
+                        val fileName = updateVersionInfo!!.fileName ?: "update_${updateVersionInfo!!.versionName}.apk"
+                        val downloadUrl = updateVersionInfo!!.downloadUrl
+                        
+                        Log.d("UpdateDownload", "开始下载APK: $downloadUrl")
+                        
+                        val apkFile = ApkInstaller.downloadApk(
+                            context = context,
+                            downloadUrl = downloadUrl,
+                            fileName = fileName,
+                            onProgress = { progress ->
+                                Log.d("UpdateDownload", "下载进度: $progress%")
+                            }
+                        )
+                        
+                        if (apkFile != null) {
+                            Log.d("UpdateDownload", "下载完成，开始安装")
+                            
+                            // 检查安装权限
+                            if (ApkInstaller.canInstallUnknownApps(context)) {
+                                ApkInstaller.installApk(context, apkFile)
+                                showUpdateDialog = false
+                            } else {
+                                Log.w("UpdateDownload", "需要安装未知来源应用权限")
+                                ApkInstaller.requestInstallPermission(context)
+                            }
+                        } else {
+                            Log.e("UpdateDownload", "下载失败")
+                            updateMessage = "下载失败，请稍后重试"
+                        }
+                        
+                    } catch (e: Exception) {
+                        Log.e("UpdateDownload", "下载或安装失败", e)
+                        updateMessage = "下载失败: ${e.message}"
+                    }
+                }
+            },
+            onCancel = {
+                if (!isForceUpdate) {
+                    showUpdateDialog = false
+                }
+            },
+            onDismiss = {
+                if (!isForceUpdate) {
+                    showUpdateDialog = false
+                }
+            }
+        )
     }
 }

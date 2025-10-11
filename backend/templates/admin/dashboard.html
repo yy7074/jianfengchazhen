@@ -2984,6 +2984,13 @@
             document.getElementById('versionModalTitle').textContent = '发布新版本';
             document.getElementById('versionForm').reset();
             document.getElementById('versionId').value = '';
+            
+            // 重置上传状态
+            clearUploadedFile();
+            
+            // 设置默认值
+            document.getElementById('versionPlatform').value = 'android';
+            
             document.getElementById('versionModal').style.display = 'flex';
         }
         
@@ -3013,19 +3020,251 @@
                 });
         }
         
+        // APK文件上传相关函数
+        function handleApkFileSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            // 验证文件类型
+            if (!file.name.toLowerCase().endsWith('.apk')) {
+                alert('请选择APK文件！');
+                input.value = '';
+                return;
+            }
+            
+            // 验证文件大小 (100MB)
+            const maxSize = 100 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('文件大小不能超过100MB！');
+                input.value = '';
+                return;
+            }
+            
+            // 开始上传
+            uploadApkFile(file);
+        }
+        
+        function uploadApkFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // 显示上传进度
+            showUploadProgress();
+            
+            // 创建XMLHttpRequest以支持进度监控
+            const xhr = new XMLHttpRequest();
+            
+            // 监听上传进度
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    updateUploadProgress(percentComplete);
+                }
+            });
+            
+            // 监听上传完成
+            xhr.addEventListener('load', function() {
+                console.log('上传完成，状态码:', xhr.status);
+                console.log('响应内容:', xhr.responseText);
+                
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        console.log('解析后的响应:', response);
+                        
+                        if (response.code === 200) {
+                            const data = response.data;
+                            console.log('上传成功，数据:', data);
+                            
+                            // 显示上传成功状态
+                            showUploadSuccess(file.name, file.size, data.download_url);
+                            
+                            // 自动填充下载链接
+                            const downloadUrlInput = document.getElementById('versionDownloadUrl');
+                            if (downloadUrlInput) {
+                                downloadUrlInput.value = data.download_url;
+                                downloadUrlInput.style.backgroundColor = '#f9f9f9'; // 保持只读样式
+                            }
+                            
+                        } else {
+                            console.error('服务器返回错误:', response.message);
+                            showUploadError(response.message || '上传失败');
+                        }
+                    } catch (e) {
+                        console.error('响应解析失败:', e);
+                        showUploadError('响应解析失败: ' + e.message);
+                    }
+                } else {
+                    console.error('HTTP错误:', xhr.status, xhr.statusText);
+                    showUploadError('上传失败，HTTP状态码: ' + xhr.status);
+                }
+            });
+            
+            // 监听上传错误
+            xhr.addEventListener('error', function() {
+                console.error('网络错误');
+                showUploadError('网络错误，上传失败');
+            });
+            
+            // 监听超时
+            xhr.addEventListener('timeout', function() {
+                console.error('上传超时');
+                showUploadError('上传超时，请重试');
+            });
+            
+            // 设置超时时间（5分钟）
+            xhr.timeout = 5 * 60 * 1000;
+            
+            // 发送请求
+            xhr.open('POST', '/api/upload-apk');
+            xhr.send(formData);
+        }
+        
+        function showUploadProgress() {
+            console.log('显示上传进度');
+            
+            const uploadArea = document.querySelector('.upload-area');
+            const progressElement = document.getElementById('uploadProgress');
+            const resultElement = document.getElementById('uploadResult');
+            
+            if (uploadArea) {
+                uploadArea.style.display = 'none';
+                console.log('隐藏上传区域');
+            } else {
+                console.error('找不到上传区域元素');
+            }
+            
+            if (progressElement) {
+                progressElement.style.display = 'block';
+                console.log('显示进度条');
+            } else {
+                console.error('找不到进度条元素');
+            }
+            
+            if (resultElement) {
+                resultElement.style.display = 'none';
+                console.log('隐藏结果区域');
+            } else {
+                console.error('找不到结果区域元素');
+            }
+        }
+        
+        function updateUploadProgress(percent) {
+            console.log(`更新进度: ${percent}%`);
+            
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            if (progressFill) {
+                progressFill.style.width = percent + '%';
+            } else {
+                console.error('找不到进度填充元素');
+            }
+            
+            if (progressText) {
+                progressText.textContent = `上传中... ${percent}%`;
+            } else {
+                console.error('找不到进度文本元素');
+            }
+        }
+        
+        function showUploadSuccess(fileName, fileSize, downloadUrl) {
+            console.log('显示上传成功:', fileName, fileSize, downloadUrl);
+            
+            // 隐藏进度条
+            const progressElement = document.getElementById('uploadProgress');
+            if (progressElement) {
+                progressElement.style.display = 'none';
+            }
+            
+            // 显示上传结果
+            const resultElement = document.getElementById('uploadResult');
+            if (resultElement) {
+                resultElement.style.display = 'flex';
+            }
+            
+            // 设置文件名
+            const fileNameElement = document.getElementById('fileName');
+            if (fileNameElement) {
+                fileNameElement.textContent = fileName;
+            }
+            
+            // 设置文件大小
+            const fileSizeElement = document.getElementById('fileSize');
+            if (fileSizeElement) {
+                fileSizeElement.textContent = formatFileSize(fileSize);
+            }
+            
+            console.log('上传成功状态显示完成');
+        }
+        
+        function showUploadError(message) {
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.querySelector('.upload-area').style.display = 'flex';
+            alert('上传失败: ' + message);
+        }
+        
+        function clearUploadedFile() {
+            // 重置文件输入
+            document.getElementById('apkFileInput').value = '';
+            document.getElementById('versionDownloadUrl').value = '';
+            
+            // 重置UI状态
+            document.querySelector('.upload-area').style.display = 'flex';
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.getElementById('uploadResult').style.display = 'none';
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function getFileSizeFromText(sizeText) {
+            // 从格式化的文件大小文本中提取字节数
+            if (!sizeText) return null;
+            
+            const match = sizeText.match(/^([\d.]+)\s*(Bytes|KB|MB|GB)$/);
+            if (!match) return null;
+            
+            const value = parseFloat(match[1]);
+            const unit = match[2];
+            
+            const multipliers = {
+                'Bytes': 1,
+                'KB': 1024,
+                'MB': 1024 * 1024,
+                'GB': 1024 * 1024 * 1024
+            };
+            
+            return Math.round(value * multipliers[unit]);
+        }
+        
         function closeVersionModal() {
             document.getElementById('versionModal').style.display = 'none';
+            // 清理上传状态
+            clearUploadedFile();
         }
         
         function saveVersionData() {
             const versionId = document.getElementById('versionId').value;
             const isEdit = versionId !== '';
             
+            // 获取上传的文件信息
+            const uploadResult = document.getElementById('uploadResult');
+            const fileName = uploadResult.style.display !== 'none' ? document.getElementById('fileName').textContent : null;
+            const fileSize = uploadResult.style.display !== 'none' ? getFileSizeFromText(document.getElementById('fileSize').textContent) : null;
+            
             const versionData = {
                 version_name: document.getElementById('versionName').value,
                 version_code: parseInt(document.getElementById('versionCode').value),
                 platform: document.getElementById('versionPlatform').value,
                 download_url: document.getElementById('versionDownloadUrl').value || 'https://example.com/app.apk',
+                file_name: fileName,
+                file_size: fileSize,
                 update_content: document.getElementById('versionUpdateContent').value,
                 is_force_update: document.getElementById('versionIsForceUpdate').checked ? 1 : 0,
                 min_support_version: document.getElementById('versionMinSupportVersion').value ? parseInt(document.getElementById('versionMinSupportVersion').value) : null,
@@ -3218,8 +3457,34 @@
                         <input type="text" id="versionPlatform" value="android" readonly style="background-color: #f5f5f5;">
                     </div>
                     <div class="form-group">
-                        <label>下载链接</label>
-                        <input type="url" id="versionDownloadUrl" placeholder="APK文件下载链接">
+                        <label>APK文件上传</label>
+                        <div class="upload-container">
+                            <input type="file" id="apkFileInput" accept=".apk" style="display: none;" onchange="handleApkFileSelect(this)">
+                            <div class="upload-area" onclick="document.getElementById('apkFileInput').click()">
+                                <div class="upload-icon">📱</div>
+                                <div class="upload-text">
+                                    <div>点击选择APK文件</div>
+                                    <div class="upload-hint">支持.apk格式，最大100MB</div>
+                                </div>
+                            </div>
+                            <div id="uploadProgress" class="upload-progress" style="display: none;">
+                                <div class="progress-bar">
+                                    <div id="progressFill" class="progress-fill"></div>
+                                </div>
+                                <div id="progressText" class="progress-text">上传中... 0%</div>
+                            </div>
+                            <div id="uploadResult" class="upload-result" style="display: none;">
+                                <div class="file-info">
+                                    <span id="fileName" class="file-name"></span>
+                                    <span id="fileSize" class="file-size"></span>
+                                </div>
+                                <button type="button" class="btn-remove" onclick="clearUploadedFile()">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>下载链接 <span class="field-hint">(自动生成或手动输入)</span></label>
+                        <input type="url" id="versionDownloadUrl" placeholder="APK文件下载链接" readonly style="background-color: #f9f9f9;">
                     </div>
                     <div class="form-group">
                         <label>更新内容</label>
@@ -3439,6 +3704,122 @@
         
         .btn-small:hover {
             opacity: 0.8;
+        }
+        
+        /* APK上传样式 */
+        .upload-container {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-container:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        
+        .upload-area {
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            opacity: 0.6;
+        }
+        
+        .upload-text {
+            color: #666;
+        }
+        
+        .upload-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .upload-progress {
+            margin-top: 15px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .progress-text {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .upload-result {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+        
+        .file-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .file-size {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-remove:hover {
+            background: #c82333;
+        }
+        
+        .field-hint {
+            font-size: 12px;
+            color: #999;
+            font-weight: normal;
         }
     </style>
 </body>
