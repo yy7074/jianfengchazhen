@@ -319,14 +319,8 @@ fun WithdrawRequestCard(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             
-            val withdrawOptions: List<Double> = listOf<Double>(
-                minWithdrawAmount,
-                minWithdrawAmount * 2,
-                minWithdrawAmount * 5
-            ).filter { it <= maxWithdrawAmount }.map { 
-                // 转换为整数金额（如果是整数的话）
-                if (it == it.toInt().toDouble()) it.toInt().toDouble() else it
-            }
+            // 固定提现金额选项：0.5元、15元、30元
+            val withdrawOptions: List<Double> = listOf(0.5, 15.0, 30.0)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -362,73 +356,9 @@ fun WithdrawRequestCard(
                 }
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
             
-            // 自定义金额输入
-            Text(
-                "或输入自定义金额",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Gray,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            
-            OutlinedTextField(
-                value = selectedAmount?.let { 
-                    if (it == 0.0) "" else it.toString() 
-                } ?: "",
-                onValueChange = { input ->
-                    if (input.isEmpty() || input.isBlank()) {
-                        onAmountSelect(0.0) // 清空选择
-                    } else {
-                        // 安全地解析输入的金额
-                        try {
-                            val amount = input.toDoubleOrNull()
-                            if (amount != null && amount >= 0) {
-                                onAmountSelect(amount)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("WithdrawScreen", "解析金额输入失败: $input", e)
-                            // 不更新金额，保持当前状态
-                        }
-                    }
-                },
-                label = { Text("自定义提现金额") },
-                placeholder = { Text("¥${String.format("%.1f", minWithdrawAmount)} - ¥${String.format("%.0f", maxWithdrawAmount)}") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF2a5298),
-                    focusedLabelColor = Color(0xFF2a5298),
-                    cursorColor = Color(0xFF2a5298)
-                ),
-                supportingText = {
-                    if (selectedAmount != null && selectedAmount > 0) {
-                        if (selectedAmount < minWithdrawAmount) {
-                            Text(
-                                "最小提现金额为¥${String.format("%.1f", minWithdrawAmount)}",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        } else if (selectedAmount > maxWithdrawAmount) {
-                            Text(
-                                "最大提现金额为¥${String.format("%.0f", maxWithdrawAmount)}",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        } else if (selectedAmount > withdrawableAmount) {
-                            Text(
-                                "超过可提现余额¥${String.format("%.2f", withdrawableAmount)}",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        } else {
-                            Text(
-                                "已选择提现金额¥${String.format("%.2f", selectedAmount)}",
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            )
+            // 自定义金额输入已隐藏
+            // 用户只能从固定的 0.5、15、30 元三个金额中选择
             
             Spacer(modifier = Modifier.height(16.dp))
             

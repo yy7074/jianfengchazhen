@@ -28,6 +28,7 @@ import com.game.needleinsert.ui.LeaderboardScreen
 import com.game.needleinsert.ui.WithdrawScreen
 import com.game.needleinsert.ui.UserProfileScreen
 import com.game.needleinsert.ui.LoginScreen
+import com.game.needleinsert.ui.CoinRecordsScreen
 import com.game.needleinsert.ui.theme.NeedleInsertTheme
 import com.game.needleinsert.ui.theme.GameColors
 import com.game.needleinsert.ui.components.AnimatedBackground
@@ -345,7 +346,11 @@ fun MainNavigation() {
             onBackPressed = { currentScreen = "menu" }
         )
         "settings" -> SettingsScreen(
-            onBack = { currentScreen = "menu" }
+            onBack = { currentScreen = "menu" },
+            onNavigateToCoinRecords = { currentScreen = "coinRecords" }
+        )
+        "coinRecords" -> CoinRecordsScreen(
+            onBack = { currentScreen = "settings" }
         )
         // 排行榜功能已移除
         /*
