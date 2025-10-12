@@ -370,7 +370,7 @@ fun VideoAdPlayer(
                                 fontSize = 12.sp
                             )
                             Text(
-                                text = "奖励：${adConfig?.getDisplayRewardCoins() ?: rewardCoins} 金币",
+                                text = "奖励：${rewardCoins} 金币",
                                 color = Color(0xFFFFD700),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
@@ -438,7 +438,7 @@ fun VideoAdPlayer(
                 Text("确认关闭广告？")
             },
             text = {
-                Text("关闭广告将无法获得 ${adConfig?.getDisplayRewardCoins() ?: rewardCoins} 金币奖励")
+                Text("关闭广告将无法获得 ${rewardCoins} 金币奖励")
             },
             confirmButton = {
                 TextButton(

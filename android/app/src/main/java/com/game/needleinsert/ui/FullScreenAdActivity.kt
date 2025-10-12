@@ -197,7 +197,7 @@ fun FullScreenAdPlayer(
                 videoUrl = adConfig.videoUrl,
                 duration = adConfig.duration,
                 skipTime = adConfig.skipTime,
-                rewardCoins = adConfig.rewardCoins,
+                rewardCoins = adConfig.getDisplayRewardCoins(),
                 advertiser = adConfig.advertiser?.ifEmpty { "广告商" } ?: "广告商",
                 onAdStarted = {
                     // 广告开始播放时记录开始时间
