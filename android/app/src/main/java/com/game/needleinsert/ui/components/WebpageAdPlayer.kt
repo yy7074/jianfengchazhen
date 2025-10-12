@@ -97,7 +97,7 @@ fun WebpageAdPlayer(
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = "💰 观看获得 ${adConfig.rewardCoins} 金币",
+                    text = "💰 观看获得 ${adConfig.getDisplayRewardCoins()} 金币",
                     color = Color(0xFFFFD700),
                     fontSize = 12.sp
                 )

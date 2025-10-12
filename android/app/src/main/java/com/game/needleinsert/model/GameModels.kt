@@ -115,15 +115,22 @@ data class AdConfig(
     @SerializedName("webpage_url") val webpageUrl: String = "", // 网页跳转URL
     @SerializedName("image_url") val imageUrl: String,
     @SerializedName("thumbnail_url") val thumbnailUrl: String = "",
-    @SerializedName("reward_coins") val rewardCoins: Int,
+    @SerializedName("reward_coins") val rewardCoins: Int,  // 基础金币
+    @SerializedName("actual_reward_coins") val actualRewardCoins: Double? = null,  // 用户实际能获得的金币（考虑等级倍数）
     @SerializedName("duration") val duration: Int = 30, // 广告时长（秒）
     @SerializedName("skip_time") val skipTime: Int = 15, // 可跳过时间（秒）
     @SerializedName("is_active") val isActive: Boolean = true,
     @SerializedName("weight") val weight: Int = 1, // 权重，用于随机选择
     @SerializedName("daily_limit") val dailyLimit: Int = 10, // 每日展示限制
     @SerializedName("click_url") val clickUrl: String = "", // 点击跳转链接
-    @SerializedName("advertiser") val advertiser: String? = null // 广告主
-) : Serializable
+    @SerializedName("advertiser") val advertiser: String? = null, // 广告主
+    @SerializedName("user_level") val userLevel: Int? = null // 用户等级
+) : Serializable {
+    // 获取显示的金币数量（优先使用实际金币，没有则使用基础金币）
+    fun getDisplayRewardCoins(): Int {
+        return actualRewardCoins?.toInt() ?: rewardCoins
+    }
+}
 
 data class AdWatchRequest(
     @SerializedName("user_id") val userId: String,

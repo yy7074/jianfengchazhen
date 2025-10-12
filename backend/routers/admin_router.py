@@ -458,6 +458,7 @@ async def get_level_stats(request: Request, db: Session = Depends(get_db)):
 # 用户编辑
 @router.put("/api/users/{user_id}")
 async def update_user(
+    request: Request,
     user_id: int, 
     user_data: dict,
     db: Session = Depends(get_db)
@@ -798,6 +799,7 @@ async def update_single_config(
 
 @router.put("/api/configs")
 async def update_system_configs(
+    request: Request,
     config_updates: List[SystemConfigUpdate],
     db: Session = Depends(get_db)
 ):
@@ -1109,6 +1111,7 @@ async def get_withdraw_detail(
 
 @router.put("/api/withdraws/{withdraw_id}/approve")
 async def approve_withdraw(
+    request: Request,
     withdraw_id: int,
     request_data: dict = None,
     db: Session = Depends(get_db)

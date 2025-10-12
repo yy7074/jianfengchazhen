@@ -25,9 +25,18 @@ async def get_random_ad(user_id: str, db: Session = Depends(get_db)):
             data=None
         )
     
+    # 转换为字典并计算用户实际能获得的金币
+    ad_data = AdConfigInfo.from_orm(ad).dict()
+    
+    # 根据用户等级计算实际奖励金币
+    from services.level_service import LevelService
+    base_coins = float(ad.reward_coins) if ad.reward_coins > 0 else 100.0
+    actual_reward = LevelService.calculate_ad_coins(db, user.level, base_coins)
+    ad_data['reward_coins'] = int(actual_reward)  # 更新为用户实际能获得的金币
+    
     return BaseResponse(
         message="获取成功",
-        data=AdConfigInfo.from_orm(ad).dict()
+        data=ad_data
     )
 
 @router.post("/watch/{user_id}", response_model=BaseResponse)
@@ -160,6 +169,11 @@ async def get_available_ads(user_id: str, db: Session = Depends(get_db)):
         # 计算剩余观看次数
         remaining_today = max(0, (ad.daily_limit or 10) - watched_today)
         
+        # 计算用户实际能获得的金币（基础金币 × 等级倍数）
+        base_coins = float(ad.reward_coins or 0)
+        from services.level_service import LevelService
+        actual_coins = LevelService.calculate_ad_coins(db, user.level, base_coins)
+        
         ad_data = {
             "id": ad.id,
             "name": ad.name,
@@ -168,12 +182,14 @@ async def get_available_ads(user_id: str, db: Session = Depends(get_db)):
             "webpage_url": ad.webpage_url,
             "image_url": ad.image_url,
             "duration": ad.duration,
-            "reward_coins": float(ad.reward_coins or 0),
+            "reward_coins": float(ad.reward_coins or 0),  # 基础金币
+            "actual_reward_coins": actual_coins,  # 用户实际能获得的金币
             "daily_limit": ad.daily_limit or 10,
             "min_watch_duration": ad.min_watch_duration or 15,
             "weight": ad.weight or 1,
             "remaining_today": remaining_today,
-            "watched_today": watched_today
+            "watched_today": watched_today,
+            "user_level": user.level  # 用户等级
         }
         
         # 只返回还有剩余观看次数的广告

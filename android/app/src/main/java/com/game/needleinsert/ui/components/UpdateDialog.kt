@@ -69,7 +69,7 @@ fun UpdateDialog(
                 
                 // 标题
                 Text(
-                    text = if (isForceUpdate) "强制更新" else "发现新版本",
+                    text = if (isForceUpdate) "在线更新" else "发现新版本",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isForceUpdate) Color.Red else MaterialTheme.colorScheme.onSurface
@@ -146,7 +146,7 @@ fun UpdateDialog(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = "此版本为强制更新，必须更新后才能继续使用应用",
+                            text = "",
                             fontSize = 12.sp,
                             color = Color.Red,
                             textAlign = TextAlign.Center,
