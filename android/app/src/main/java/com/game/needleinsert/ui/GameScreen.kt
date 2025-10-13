@@ -148,7 +148,13 @@ fun GameScreen(
                 contract = ActivityResultContracts.StartActivityForResult()
             ) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
-                    // 广告观看完成，重置广告状态并刷新金币
+                    // 广告观看完成，先尝试读取回传的奖励信息展示提示
+                    val coins = result.data?.getIntExtra(FullScreenAdActivity.RESULT_AD_COINS, 0) ?: 0
+                    val message = result.data?.getStringExtra(FullScreenAdActivity.RESULT_AD_MESSAGE)
+                    if (coins > 0) {
+                        viewModel.showAdRewardFallback(coins, message)
+                    }
+                    // 然后重置广告状态并刷新金币
                     viewModel.resetAdState()
                 } else {
                     // 广告被取消

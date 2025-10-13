@@ -487,23 +487,27 @@ class GameViewModel : ViewModel() {
             isRestartAd = false  // 重置重启广告标志
         )
         
-        // 如果是重启广告，观看完成后执行游戏重启
-        if (wasRestartAd) {
-            Log.d("GameViewModel", "重启广告观看完成，开始重启游戏")
-            onRestartAdCompleted()
-            return
-        }
-        
-        // 如果金币增加了，显示奖励提示
+        // 如果金币增加了，先显示奖励提示（即便是重启广告也提示再重启）
         if (coinDiff > 0) {
             adReward = AdReward(
                 coins = coinDiff,
                 message = "观看广告获得 $coinDiff 金币！"
             )
-            
             Log.d("GameViewModel", "显示奖励提示: +$coinDiff 金币")
-            
-            // 3秒后隐藏奖励提示
+        }
+        
+        // 如果是重启广告，观看完成后执行游戏重启（延迟一点点，给提示渲染机会）
+        if (wasRestartAd) {
+            Log.d("GameViewModel", "重启广告观看完成，准备重启游戏")
+            viewModelScope.launch {
+                delay(300) // 短暂延时避免立即再次触发广告逻辑或UI闪烁
+                onRestartAdCompleted()
+            }
+            return
+        }
+        
+        // 非重启广告时，若显示了奖励提示，则3秒后隐藏
+        if (coinDiff > 0) {
             viewModelScope.launch {
                 delay(3000)
                 adReward = null
@@ -579,5 +583,18 @@ class GameViewModel : ViewModel() {
     // 关闭广告奖励提示
     fun dismissAdReward() {
         adReward = null
+    }
+
+    // 从全屏广告Activity回传时，兜底显示奖励提示（不修改金币，仅提示）
+    fun showAdRewardFallback(coins: Int, message: String?) {
+        if (coins <= 0) return
+        adReward = AdReward(
+            coins = coins,
+            message = message ?: "观看广告获得 $coins 金币！"
+        )
+        viewModelScope.launch {
+            delay(3000)
+            adReward = null
+        }
     }
 } 

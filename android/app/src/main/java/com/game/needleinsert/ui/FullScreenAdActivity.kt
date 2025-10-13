@@ -175,7 +175,7 @@ fun FullScreenAdPlayer(
                 onAdCompleted = { isCompleted ->
                     coroutineScope.launch {
                         val userId = UserManager.getCurrentUser()?.id?.toString() ?: "1"
-                        val reward = AdManager.completeAdWatch(userId, isCompleted)
+                        val reward = AdManager.completeAdWatch(userId, isCompleted, adConfig = adConfig)
                         if (reward != null) {
                             if (isCompleted) {
                                 onAdCompleted(reward.coins, reward.message ?: "观看完成")
@@ -206,7 +206,7 @@ fun FullScreenAdPlayer(
                 onAdCompleted = { isCompleted ->
                     coroutineScope.launch {
                         val userId = UserManager.getCurrentUser()?.id?.toString() ?: "1"
-                        val reward = AdManager.completeAdWatch(userId, isCompleted)
+                        val reward = AdManager.completeAdWatch(userId, isCompleted, adConfig = adConfig)
                         if (reward != null) {
                             if (isCompleted) {
                                 onAdCompleted(reward.coins, reward.message ?: "观看完成")

@@ -31,17 +31,21 @@ fun WebpageAdPlayer(
     var countdown by remember { mutableStateOf(adConfig.duration) }
     var canSkip by remember { mutableStateOf(false) }
     var webViewStarted by remember { mutableStateOf(false) }
+    var adCompleted by remember { mutableStateOf(false) } // 防止重复调用
     
     // 倒计时逻辑
-    LaunchedEffect(countdown, webViewStarted) {
+    LaunchedEffect(countdown, webViewStarted, adCompleted) {
+        if (adCompleted) return@LaunchedEffect // 已完成，不再执行
+        
         if (webViewStarted && countdown > 0) {
             delay(1000)
             countdown--
             if (countdown <= adConfig.duration - adConfig.skipTime) {
                 canSkip = true
             }
-        } else if (webViewStarted && countdown <= 0) {
-            // 倒计时结束，自动完成
+        } else if (webViewStarted && countdown <= 0 && !adCompleted) {
+            // 倒计时结束，自动完成（只调用一次）
+            adCompleted = true
             onAdCompleted(true)
         }
     }
@@ -119,13 +123,16 @@ fun WebpageAdPlayer(
                 }
                 
                 // 跳过/关闭按钮
-                if (canSkip || countdown <= 0) {
+                if ((canSkip || countdown <= 0) && !adCompleted) {
                     Button(
                         onClick = {
-                            if (countdown <= 0) {
-                                onAdCompleted(true)
-                            } else {
-                                onAdCompleted(false) // 跳过
+                            if (!adCompleted) {
+                                adCompleted = true
+                                if (countdown <= 0) {
+                                    onAdCompleted(true)
+                                } else {
+                                    onAdCompleted(false) // 跳过
+                                }
                             }
                         },
                         colors = ButtonDefaults.buttonColors(

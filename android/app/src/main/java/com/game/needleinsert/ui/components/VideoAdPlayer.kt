@@ -52,6 +52,7 @@ fun VideoAdPlayer(
     var showControls by remember { mutableStateOf(true) }
     var isVideoReady by remember { mutableStateOf(false) }
     var hasError by remember { mutableStateOf(false) }
+    var adCompleted by remember { mutableStateOf(false) } // 防止重复调用
     
     // 初始化ExoPlayer
     LaunchedEffect(videoUrl) {
@@ -76,7 +77,10 @@ fun VideoAdPlayer(
                             }
                         }
                         Player.STATE_ENDED -> {
-                            onAdCompleted(true)
+                            if (!adCompleted) {
+                                adCompleted = true
+                                onAdCompleted(true)
+                            }
                         }
                         Player.STATE_IDLE -> {}
                         Player.STATE_BUFFERING -> {}
@@ -378,11 +382,14 @@ fun VideoAdPlayer(
                         }
                         
                         // 跳过按钮
-                        if (canSkip) {
+                        if (canSkip && !adCompleted) {
                             Button(
                                 onClick = { 
-                                    exoPlayer?.pause()
-                                    onAdCompleted(false) 
+                                    if (!adCompleted) {
+                                        adCompleted = true
+                                        exoPlayer?.pause()
+                                        onAdCompleted(false)
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color.White.copy(alpha = 0.8f)

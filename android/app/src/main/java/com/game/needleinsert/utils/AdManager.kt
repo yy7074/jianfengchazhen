@@ -252,16 +252,24 @@ object AdManager {
      */
     fun startWatchingAd() {
         adWatchStartTime = System.currentTimeMillis()
+        // 标记冷却时间，防止刚看完一个广告立刻再次触发广告请求
+        lastAdRequestTime = adWatchStartTime
         Log.d("AdManager", "开始观看广告")
     }
     
         /**
      * 完成观看广告并获取奖励
+     * @param adConfig 广告配置，如果为null则使用currentAd
      */
-    suspend fun completeAdWatch(userId: String, isCompleted: Boolean = true, skipTime: Long = 0): AdReward? {
-        val ad = currentAd ?: return null
+    suspend fun completeAdWatch(userId: String, isCompleted: Boolean = true, skipTime: Long = 0, adConfig: AdConfig? = null): AdReward? {
+        Log.d("AdManager", "completeAdWatch 被调用: userId=$userId, isCompleted=$isCompleted, adConfig=${adConfig?.title ?: "null"}, currentAd=${currentAd?.title ?: "null"}")
+        val ad = adConfig ?: currentAd ?: run {
+            Log.e("AdManager", "completeAdWatch: adConfig 和 currentAd 都为 null，无法结算奖励")
+            return null
+        }
         val watchDuration = System.currentTimeMillis() - adWatchStartTime
         val requiredWatchTime = ad.skipTime * 1000L // 转换为毫秒
+        Log.d("AdManager", "观看时长: ${watchDuration}ms, 需要: ${requiredWatchTime}ms, 使用广告: ${ad.title}")
         
         return try {
             // 检查观看时间是否足够
