@@ -252,7 +252,8 @@ fun CoinRecordsCard(
                 }
                 if (coinRecords.size > 5) {
                     Text(
-                        "还有${coinRecords.size - 5}条记录",
+//                        "还有${coinRecords.size - 5}条记录",
+                        "",
                         color = Color.Gray,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(top = 4.dp)

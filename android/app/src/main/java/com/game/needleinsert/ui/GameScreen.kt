@@ -184,7 +184,7 @@ fun GameScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "💰 观看完整可获得 ${ad.rewardCoins} 金币",
+                                text = "💰 观看完整可获得 ${ad.getDisplayRewardCoins()} 金币",
                                 fontSize = 14.sp,
                                 color = Color(0xFFFFD700),
                                 fontWeight = FontWeight.Bold
@@ -911,7 +911,7 @@ fun AdPlayerDialog(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "💰 奖励：${ad.rewardCoins} 金币",
+                    text = "💰 奖励：${ad.getDisplayRewardCoins()} 金币",
                     fontSize = 14.sp,
                     color = Color(0xFFFFD700),
                     fontWeight = FontWeight.Bold
