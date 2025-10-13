@@ -35,7 +35,6 @@ import android.util.Log
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onNavigateToCoinRecords: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -117,8 +116,7 @@ fun SettingsScreen(
             item {
                 CoinRecordsCard(
                     coinRecords = uiState.coinRecords,
-                    isLoading = uiState.isLoading,
-                    onViewMore = onNavigateToCoinRecords
+                    isLoading = uiState.isLoading
                 )
             }
             
@@ -236,8 +234,7 @@ fun GameStatsCard(
 @Composable
 fun CoinRecordsCard(
     coinRecords: List<SettingsViewModel.CoinRecord>,
-    isLoading: Boolean,
-    onViewMore: () -> Unit = {}
+    isLoading: Boolean
 ) {
     SettingsCard(
         title = "金币获取记录",
@@ -254,17 +251,12 @@ fun CoinRecordsCard(
                     CoinRecordItem(record)
                 }
                 if (coinRecords.size > 5) {
-                    TextButton(
-                        onClick = onViewMore,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "查看全部 ${coinRecords.size} 条记录 →",
-                            color = Color(0xFF2a5298),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    Text(
+                        "还有${coinRecords.size - 5}条记录",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         } else {

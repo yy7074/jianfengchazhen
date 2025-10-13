@@ -346,8 +346,7 @@ fun MainNavigation() {
             onBackPressed = { currentScreen = "menu" }
         )
         "settings" -> SettingsScreen(
-            onBack = { currentScreen = "menu" },
-            onNavigateToCoinRecords = { currentScreen = "coinRecords" }
+            onBack = { currentScreen = "menu" }
         )
         "coinRecords" -> CoinRecordsScreen(
             onBack = { currentScreen = "settings" }

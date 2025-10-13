@@ -454,7 +454,7 @@ fun WithdrawRulesCard(
             }
             
             val rules = listOf(
-                "提现金额：¥${String.format("%.1f", minWithdrawAmount)}起，最高¥${String.format("%.0f", maxWithdrawAmount)}",
+                "提现金额：仅支持¥0.5、¥15、¥30三种固定金额",
                 if (dailyWithdrawLimit == 1) "每天只能提现一次" else "每天最多可提现${dailyWithdrawLimit}次",
                 "工作日1-3个工作日到账"
             )
