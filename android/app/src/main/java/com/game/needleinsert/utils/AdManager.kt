@@ -96,31 +96,41 @@ object AdManager {
      */
     suspend fun loadAdsFromBackend(userId: String, deviceId: String, userLevel: Int): List<AdConfig> {
         return try {
-            // 检查缓存是否有效
+            // 暂时禁用缓存，确保每次都获取最新数据（包含正确的actualRewardCoins）
             val currentTime = System.currentTimeMillis()
-            if (cachedAds.isNotEmpty() && (currentTime - adsCacheTime) < cacheExpireTime) {
-                Log.d("AdManager", "使用缓存的广告列表")
-                return cachedAds
-            }
+            // if (cachedAds.isNotEmpty() && (currentTime - adsCacheTime) < cacheExpireTime) {
+            //     Log.d("AdManager", "使用缓存的广告列表")
+            //     return cachedAds
+            // }
             
             // 实际调用后端API - 使用真实的用户ID
             val actualUserId = if (userId != "default" && userId != "1") userId else "1"
-            Log.d("AdManager", "调用后端API获取广告，用户ID: $actualUserId")
+            Log.d("AdManager", "调用后端API获取广告，用户ID: $actualUserId, 用户等级: $userLevel")
 
             // 移除token验证，直接调用API（后端可能不需要认证）
             val response = RetrofitClient.getApiService().getAvailableAds("", actualUserId)
 
             if (response.isSuccessful) {
                 Log.d("AdManager", "后端API调用成功，状态码: ${response.code()}")
+                Log.d("AdManager", "完整响应: ${response.body()}")
                 val responseData = RetrofitClient.getResponseData(response)
+                Log.d("AdManager", "响应数据: $responseData")
                 if (responseData != null) {
                     @Suppress("UNCHECKED_CAST")
                     val adsData = responseData["ads"] as? List<Map<String, Any>>
+                    Log.d("AdManager", "广告数据列表: $adsData")
                     if (adsData != null && adsData.isNotEmpty()) {
                         // 将Map转换为AdConfig对象
                         val ads = adsData.mapNotNull { adData ->
                             try {
-                                AdConfig(
+                                Log.d("AdManager", "原始广告数据: $adData")
+                                val actualRewardCoins = (adData["actual_reward_coins"] as? Number)?.toDouble()
+                                val userLevel = (adData["user_level"] as? Number)?.toInt()
+                                val baseRewardCoins = (adData["reward_coins"] as? Number)?.toInt() ?: 0
+                                
+                                Log.d("AdManager", "解析: reward_coins=$baseRewardCoins, actual_reward_coins=$actualRewardCoins, user_level=$userLevel")
+                                
+                                val adConfig = AdConfig(
                                     id = (adData["id"] as? Number)?.toInt()?.toString() ?: adData["id"].toString(),
                                     title = adData["name"] as? String ?: "",
                                     description = adData["description"] as? String ?: "",
@@ -129,13 +139,19 @@ object AdManager {
                                     webpageUrl = adData["webpage_url"] as? String ?: "",
                                     imageUrl = adData["image_url"] as? String ?: "",
                                     rewardCoins = (adData["reward_coins"] as? Number)?.toInt() ?: 0,
+                                    actualRewardCoins = actualRewardCoins,
                                     duration = (adData["duration"] as? Number)?.toInt() ?: 30,
                                     skipTime = (adData["min_watch_duration"] as? Number)?.toInt() ?: 15,
                                     isActive = true,
                                     weight = (adData["weight"] as? Number)?.toInt() ?: 1,
                                     dailyLimit = (adData["daily_limit"] as? Number)?.toInt() ?: 10,
-                                    advertiser = adData["advertiser"] as? String ?: "广告商"
+                                    advertiser = adData["advertiser"] as? String ?: "广告商",
+                                    userLevel = userLevel
                                 )
+                                
+                                Log.d("AdManager", "✅ 创建AdConfig - 标题:${adConfig.title}, 基础金币:${adConfig.rewardCoins}, 实际金币:${adConfig.actualRewardCoins}, 等级:${adConfig.userLevel}")
+                                Log.d("AdManager", "   getDisplayRewardCoins()=${adConfig.getDisplayRewardCoins()}")
+                                adConfig
                             } catch (e: Exception) {
                                 Log.e("AdManager", "解析广告数据失败: ${e.message}")
                                 null
