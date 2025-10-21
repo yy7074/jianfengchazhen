@@ -71,8 +71,8 @@ class AdService:
         else:  # webpage
             min_duration = ConfigService.get_webpage_ad_min_duration(db)
         
-        # 检查观看时长是否达标
-        is_completed = watch_request.is_completed or watch_request.watch_duration >= min_duration
+        # 检查观看时长是否达标（只依赖服务端验证的观看时长，不信任客户端的is_completed标志）
+        is_completed = watch_request.watch_duration >= min_duration
         
         # 计算奖励金币（使用配置的动态奖励范围）
         if is_completed:

@@ -272,8 +272,9 @@ object AdManager {
         Log.d("AdManager", "观看时长: ${watchDuration}ms, 需要: ${requiredWatchTime}ms, 使用广告: ${ad.title}")
         
         return try {
-            // 检查观看时间是否足够
-            val canGetReward = watchDuration >= requiredWatchTime || isCompleted
+            // 检查观看时间是否足够（只依赖实际观看时长，不信任is_completed标志）
+            val canGetReward = watchDuration >= requiredWatchTime
+            val actualIsCompleted = canGetReward  // 根据实际观看时长判断
             
             if (canGetReward) {
                 // 提交到后端验证并获得奖励
@@ -281,7 +282,7 @@ object AdManager {
                     userId = userId,
                     adId = ad.id,
                     watchDuration = (watchDuration / 1000).toLong(), // 转换毫秒为秒
-                    isCompleted = isCompleted,
+                    isCompleted = actualIsCompleted,  // 发送实际的完成状态
                     skipTime = skipTime,
                     deviceInfo = "Android"
                 )

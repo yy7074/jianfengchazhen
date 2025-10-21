@@ -174,7 +174,13 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         func.date(AdWatchRecord.watch_time) == today
     ).scalar() or 0
     
-    # 金币统计
+    # 广告金币统计（只统计广告观看记录中的奖励金币，数据准确）
+    total_ad_coins = db.query(func.sum(AdWatchRecord.reward_coins)).scalar() or 0
+    today_ad_coins = db.query(func.sum(AdWatchRecord.reward_coins)).filter(
+        func.date(AdWatchRecord.watch_time) == today
+    ).scalar() or 0
+    
+    # 全部金币统计（包括所有类型：广告、游戏、注册等）
     total_coins = db.query(func.sum(CoinTransaction.amount)).filter(
         CoinTransaction.amount > 0
     ).scalar() or 0
@@ -192,7 +198,12 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "users": {"total": total_users, "today": today_users, "active": active_users},
         "games": {"total": total_games, "today": today_games},
         "ads": {"total": total_ads_watched, "today": today_ads},
-        "coins": {"total": float(total_coins), "today": float(today_coins)},
+        "coins": {
+            "total": float(total_coins), 
+            "today": float(today_coins),
+            "ad_total": float(total_ad_coins),  # 广告金币总计
+            "ad_today": float(today_ad_coins)   # 今日广告金币
+        },
         "withdraws": {"pending": pending_withdraws}
     }
     

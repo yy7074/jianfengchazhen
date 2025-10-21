@@ -95,7 +95,7 @@ class AdConfigInfo(BaseModel):
 class AdWatchRequest(BaseModel):
     ad_id: str  # Android客户端发送字符串类型的ID
     watch_duration: int = Field(..., ge=1)
-    is_completed: bool = Field(default=True)  # 是否完整观看
+    is_completed: bool = Field(default=False)  # 是否完整观看（由服务端验证，不信任客户端）
     skip_time: Optional[int] = Field(default=0)  # 跳过时间
     device_info: Optional[str] = None
     user_id: Optional[str] = None  # Android客户端会发送这个字段

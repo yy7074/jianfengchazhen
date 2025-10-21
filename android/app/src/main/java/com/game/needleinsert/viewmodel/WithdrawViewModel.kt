@@ -8,6 +8,7 @@ import com.game.needleinsert.model.WithdrawRequest
 import com.game.needleinsert.network.RetrofitClient
 import com.game.needleinsert.utils.ConfigManager
 import com.game.needleinsert.utils.UserManager
+import com.game.needleinsert.utils.WithdrawInfoManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,9 +57,20 @@ class WithdrawViewModel : ViewModel() {
     fun loadUserInfo(context: Context) {
         viewModelScope.launch {
             try {
+                // 加载保存的提现信息
+                val savedAlipay = WithdrawInfoManager.getSavedAlipayAccount(context)
+                val savedName = WithdrawInfoManager.getSavedRealName(context)
+                Log.d("WithdrawViewModel", "从本地加载提现信息: alipay=$savedAlipay, name=$savedName")
+                
                 // 安全地更新状态，避免ClassCastException
                 val currentState = _uiState.value
-                _uiState.value = currentState.copy(isLoading = true, error = null)
+                _uiState.value = currentState.copy(
+                    isLoading = true, 
+                    error = null,
+                    alipayAccount = savedAlipay,  // 加载保存的支付宝账号
+                    realName = savedName  // 加载保存的真实姓名
+                )
+                Log.d("WithdrawViewModel", "UI状态已更新，提现信息已填充")
                 
                 // 从服务器刷新用户信息
                 val refreshedUser = UserManager.refreshUserInfo()
@@ -312,12 +324,20 @@ class WithdrawViewModel : ViewModel() {
                     return@launch
                 }
                 
+                // 保存提现信息到本地，下次自动填充
+                Log.d("WithdrawViewModel", "提现成功，保存提现信息到本地")
+                WithdrawInfoManager.saveWithdrawInfo(
+                    context,
+                    _uiState.value.alipayAccount,
+                    _uiState.value.realName
+                )
+                Log.d("WithdrawViewModel", "提现信息已保存，下次将自动填充")
+                
                 _uiState.value = _uiState.value.copy(
                     isSubmitting = false,
                     message = "提现申请提交成功，请等待审核",
-                    selectedAmount = null,
-                    alipayAccount = "",
-                    realName = ""
+                    selectedAmount = null
+                    // 不再清空支付宝账号和真实姓名，方便下次使用
                 )
                 
                 // 重新加载用户信息和提现历史
