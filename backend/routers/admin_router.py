@@ -222,32 +222,39 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     
     # 获取统计数据
     today = date.today()
+    today_start = datetime.combine(today, datetime.min.time())  # 今天 00:00:00
+    today_end = datetime.combine(today, datetime.max.time())    # 今天 23:59:59
     
     # 用户统计
     total_users = db.query(func.count(User.id)).scalar() or 0
     today_users = db.query(func.count(User.id)).filter(
-        func.date(User.register_time) == today
+        User.register_time >= today_start,
+        User.register_time <= today_end
     ).scalar() or 0
     active_users = db.query(func.count(User.id)).filter(
-        func.date(User.last_login_time) == today
+        User.last_login_time >= today_start,
+        User.last_login_time <= today_end
     ).scalar() or 0
     
     # 游戏统计
     total_games = db.query(func.count(GameRecord.id)).scalar() or 0
     today_games = db.query(func.count(GameRecord.id)).filter(
-        func.date(GameRecord.play_time) == today
+        GameRecord.play_time >= today_start,
+        GameRecord.play_time <= today_end
     ).scalar() or 0
     
     # 广告统计
     total_ads_watched = db.query(func.count(AdWatchRecord.id)).scalar() or 0
     today_ads = db.query(func.count(AdWatchRecord.id)).filter(
-        func.date(AdWatchRecord.watch_time) == today
+        AdWatchRecord.watch_time >= today_start,
+        AdWatchRecord.watch_time <= today_end
     ).scalar() or 0
     
     # 广告金币统计（只统计广告观看记录中的奖励金币，数据准确）
     total_ad_coins = db.query(func.sum(AdWatchRecord.reward_coins)).scalar() or 0
     today_ad_coins = db.query(func.sum(AdWatchRecord.reward_coins)).filter(
-        func.date(AdWatchRecord.watch_time) == today
+        AdWatchRecord.watch_time >= today_start,
+        AdWatchRecord.watch_time <= today_end
     ).scalar() or 0
     
     # 全部金币统计（包括所有类型：广告、游戏、注册等）
@@ -256,7 +263,8 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     ).scalar() or 0
     today_coins = db.query(func.sum(CoinTransaction.amount)).filter(
         CoinTransaction.amount > 0,
-        func.date(CoinTransaction.created_time) == today
+        CoinTransaction.created_time >= today_start,
+        CoinTransaction.created_time <= today_end
     ).scalar() or 0
     
     # 提现统计
