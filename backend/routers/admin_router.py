@@ -141,6 +141,76 @@ async def admin_logout(request: Request, response: Response):
     response.delete_cookie("admin_session")
     return response
 
+@router.post("/api/change-password")
+async def change_admin_password(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """修改管理员密码"""
+    admin_id = verify_admin(request)
+    if not admin_id:
+        return JSONResponse(
+            content={"success": False, "message": "未登录或登录已过期"},
+            status_code=401
+        )
+    
+    try:
+        body = await request.json()
+        old_password = body.get("old_password", "")
+        new_password = body.get("new_password", "")
+        confirm_password = body.get("confirm_password", "")
+        
+        # 验证输入
+        if not old_password or not new_password or not confirm_password:
+            return JSONResponse(
+                content={"success": False, "message": "所有字段都必须填写"},
+                status_code=400
+            )
+        
+        if new_password != confirm_password:
+            return JSONResponse(
+                content={"success": False, "message": "两次输入的新密码不一致"},
+                status_code=400
+            )
+        
+        if len(new_password) < 6:
+            return JSONResponse(
+                content={"success": False, "message": "新密码长度不能少于6位"},
+                status_code=400
+            )
+        
+        # 查询管理员
+        admin = db.query(Admin).filter(Admin.id == admin_id).first()
+        if not admin:
+            return JSONResponse(
+                content={"success": False, "message": "管理员不存在"},
+                status_code=404
+            )
+        
+        # 验证旧密码
+        old_password_hash = hash_password(old_password)
+        if admin.password_hash != old_password_hash:
+            return JSONResponse(
+                content={"success": False, "message": "原密码错误"},
+                status_code=400
+            )
+        
+        # 更新密码
+        new_password_hash = hash_password(new_password)
+        admin.password_hash = new_password_hash
+        db.commit()
+        
+        return JSONResponse(
+            content={"success": True, "message": "密码修改成功，请重新登录"}
+        )
+        
+    except Exception as e:
+        print(f"修改密码错误: {e}")
+        return JSONResponse(
+            content={"success": False, "message": f"修改密码失败: {str(e)}"},
+            status_code=500
+        )
+
 # ==================== 管理后台页面 ====================
 
 # 管理后台首页

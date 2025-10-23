@@ -504,24 +504,37 @@ fun VersionInfoCard() {
     // 获取当前版本信息
     val (currentVersionName, currentVersionCode) = VersionManager.getCurrentVersionInfo(context)
     
-    // 监听权限状态变化，处理权限授权后的安装
-    LaunchedEffect(pendingApkFile) {
-        pendingApkFile?.let { apkFile ->
-            // 定期检查权限状态，直到获得权限或用户取消
-            while (pendingApkFile != null) {
-                if (ApkInstaller.canInstallUnknownApps(context)) {
-                    Log.d("InstallPermission", "权限已授予，继续安装APK")
-                    val success = ApkInstaller.installApk(context, apkFile)
-                    if (success) {
-                        showUpdateDialog = false
-                        updateMessage = "安装包已启动，请按提示完成安装"
+    // 监听窗口焦点变化，处理从设置页面返回后的安装
+    DisposableEffect(Unit) {
+        val callback = object : android.view.ViewTreeObserver.OnWindowFocusChangeListener {
+            override fun onWindowFocusChanged(hasFocus: Boolean) {
+                if (hasFocus && pendingApkFile != null) {
+                    Log.d("InstallPermission", "窗口获得焦点，检查安装权限")
+                    if (ApkInstaller.canInstallUnknownApps(context)) {
+                        Log.d("InstallPermission", "权限已授予，立即安装APK")
+                        val apkFile = pendingApkFile!!
+                        pendingApkFile = null  // 先清空，避免重复安装
+                        
+                        val success = ApkInstaller.installApk(context, apkFile)
+                        if (success) {
+                            showUpdateDialog = false
+                            updateMessage = "安装包已启动，请按提示完成安装"
+                        } else {
+                            updateMessage = "启动安装失败，请重试"
+                        }
+                    } else {
+                        Log.d("InstallPermission", "权限未授予，继续等待")
                     }
-                    pendingApkFile = null
-                    break
                 }
-                // 每秒检查一次权限状态
-                kotlinx.coroutines.delay(1000)
             }
+        }
+        
+        // 获取根视图并添加监听器
+        val view = (context as? android.app.Activity)?.window?.decorView
+        view?.viewTreeObserver?.addOnWindowFocusChangeListener(callback)
+        
+        onDispose {
+            view?.viewTreeObserver?.removeOnWindowFocusChangeListener(callback)
         }
     }
     

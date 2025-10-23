@@ -80,15 +80,19 @@ class WithdrawViewModel : ViewModel() {
                     val withdrawableAmount = refreshedUser.coins / coinToRmbRate
                     val exchangeRateText = "${coinToRmbRate.toInt()}金币 ≈ ¥1.00"
                     
-                    // 创建新的状态对象，避免类型转换问题
+                    // 保留已填充的提现信息（如果当前状态为空，使用保存的值）
+                    val finalAlipay = if (currentState.alipayAccount.isBlank()) savedAlipay else currentState.alipayAccount
+                    val finalName = if (currentState.realName.isBlank()) savedName else currentState.realName
+                    
+                    // 创建新的状态对象，避免类型转换问题，保留提现信息
                     val newState = WithdrawUiState(
                         isLoading = false,
                         isSubmitting = currentState.isSubmitting,
                         currentCoins = refreshedUser.coins,
                         withdrawableAmount = withdrawableAmount,
                         selectedAmount = currentState.selectedAmount,
-                        alipayAccount = currentState.alipayAccount,
-                        realName = currentState.realName,
+                        alipayAccount = finalAlipay,  // 保留提现信息
+                        realName = finalName,  // 保留提现信息
                         withdrawHistory = currentState.withdrawHistory,
                         message = currentState.message,
                         error = null,
@@ -96,6 +100,7 @@ class WithdrawViewModel : ViewModel() {
                         exchangeRateText = exchangeRateText
                     )
                     _uiState.value = newState
+                    Log.d("WithdrawViewModel", "用户信息刷新后保留提现信息: alipay=$finalAlipay, name=$finalName")
                     
                     Log.d("WithdrawViewModel", "用户信息已刷新: 金币=${refreshedUser.coins}")
                 } else {

@@ -823,11 +823,20 @@
                 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <div class="stat-icon coins">🪙</div>
+                        <div class="stat-icon coins">💰</div>
                     </div>
-                    <div class="stat-value" id="totalCoins">{{ "%.0f"|format(stats.coins.ad_total) }}</div>
+                    <div class="stat-value" id="totalCoins">{{ "%.0f"|format(stats.coins.total) }}</div>
+                    <div class="stat-label">总发放金币</div>
+                    <div class="stat-change">今日发放: {{ "%.0f"|format(stats.coins.today) }} | 广告: {{ "%.0f"|format(stats.coins.ad_today) }}</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon ads">📺</div>
+                    </div>
+                    <div class="stat-value" id="adCoins">{{ "%.0f"|format(stats.coins.ad_total) }}</div>
                     <div class="stat-label">广告金币总计</div>
-                    <div class="stat-change">今日广告发放: {{ "%.0f"|format(stats.coins.ad_today) }}</div>
+                    <div class="stat-change">今日: {{ "%.0f"|format(stats.coins.ad_today) }} 枚</div>
                 </div>
                 
                 <div class="stat-card">
@@ -858,6 +867,9 @@
                         </button>
                         <button class="btn btn-warning" onclick="showPage('withdraws')">
                             💰 处理提现
+                        </button>
+                        <button class="btn btn-info" onclick="showChangePasswordModal()">
+                            🔐 修改密码
                         </button>
                         <button class="btn btn-primary" onclick="loadStats()">
                             🔄 刷新数据
@@ -3891,5 +3903,113 @@
             font-weight: normal;
         }
     </style>
+    
+    <script>
+        // 修改密码相关函数
+        function showChangePasswordModal() {
+            const modal = document.getElementById('changePasswordModal');
+            modal.style.display = 'flex';
+            // 清空表单
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        function hideChangePasswordModal() {
+            const modal = document.getElementById('changePasswordModal');
+            modal.style.display = 'none';
+        }
+
+        async function changePassword(event) {
+            event.preventDefault();
+            
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                alert('请填写所有字段');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('两次输入的新密码不一致');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('新密码长度不能少于6位');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/api/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        old_password: oldPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message || '密码修改成功，请重新登录');
+                    hideChangePasswordModal();
+                    // 延迟1秒后跳转到登录页
+                    setTimeout(() => {
+                        window.location.href = '/admin/login';
+                    }, 1000);
+                } else {
+                    alert(data.message || '修改密码失败');
+                }
+            } catch (error) {
+                console.error('修改密码错误:', error);
+                alert('修改密码失败，请重试');
+            }
+        }
+    </script>
+    
+    <!-- 修改密码模态框 -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>🔐 修改管理员密码</h3>
+                <span class="close-modal" onclick="hideChangePasswordModal()">&times;</span>
+            </div>
+            <form onsubmit="changePassword(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">原密码</label>
+                        <input type="password" id="oldPassword" class="form-input" placeholder="请输入原密码" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">新密码</label>
+                        <input type="password" id="newPassword" class="form-input" placeholder="请输入新密码（至少6位）" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">确认新密码</label>
+                        <input type="password" id="confirmPassword" class="form-input" placeholder="请再次输入新密码" required minlength="6">
+                    </div>
+                    <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px; margin-top: 15px;">
+                        <strong>⚠️ 注意：</strong>
+                        <ul style="margin: 8px 0 0 20px; padding: 0;">
+                            <li>密码长度至少6位</li>
+                            <li>修改成功后需要重新登录</li>
+                            <li>请妥善保管新密码</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideChangePasswordModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">确认修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
