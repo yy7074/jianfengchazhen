@@ -382,7 +382,7 @@
                     <p>管理和审核用户提现申请，确保资金安全</p>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-secondary" onclick="location.href='/admin/'">
+                    <button class="btn btn-secondary" onclick="location.href='/vfjsadrhbadmin/'">
                         ← 返回主控台
                     </button>
                     <button class="btn" style="background: #e74c3c;" onclick="logout()">
@@ -507,20 +507,20 @@
             }
             
             try {
-                const response = await fetch('/admin/api/logout', {
+                const response = await fetch('/vfjsadrhbadmin/api/logout', {
                     method: 'POST',
                     credentials: 'include'
                 });
                 
                 if (response.ok) {
                     alert('已登出');
-                    window.location.href = '/admin/login';
+                    window.location.href = '/vfjsadrhbadmin/login';
                 } else {
                     alert('登出失败');
                 }
             } catch (error) {
                 console.error('登出错误:', error);
-                window.location.href = '/admin/login';
+                window.location.href = '/vfjsadrhbadmin/login';
             }
         }
 
@@ -532,7 +532,7 @@
                 const maxAmount = document.getElementById('maxAmount').value;
                 const search = document.getElementById('searchInput').value;
 
-                let url = `/admin/api/withdraws?page=${page}&size=10`;
+                let url = `/vfjsadrhbadmin/api/withdraws?page=${page}&size=10`;
                 if (status) url += `&status=${status}`;
                 if (minAmount) url += `&min_amount=${minAmount}`;
                 if (maxAmount) url += `&max_amount=${maxAmount}`;
@@ -632,7 +632,7 @@
         // 更新统计信息
         async function updateStats() {
             try {
-                const response = await fetch('/admin/api/withdraws');
+                const response = await fetch('/vfjsadrhbadmin/api/withdraws');
                 const result = await response.json();
 
                 if (result.code === 200) {
@@ -656,7 +656,7 @@
         // 显示详情
         async function showDetail(withdrawId) {
             try {
-                const response = await fetch(`/admin/api/withdraws/${withdrawId}`);
+                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}`);
                 const result = await response.json();
 
                 if (result.code === 200) {
@@ -709,10 +709,10 @@
                             <span class="label">状态:</span>
                             <span class="value status-badge status-${withdraw.status}">${getStatusText(withdraw.status)}</span>
                         </div>
-                        ${withdraw.admin_note ? `
+                        ${withdraw.vfjsadrhbadmin_note ? `
                         <div class="detail-item">
                             <span class="label">管理员备注:</span>
-                            <span class="value">${withdraw.admin_note}</span>
+                            <span class="value">${withdraw.vfjsadrhbadmin_note}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -834,10 +834,10 @@
         // 处理提现审核
         async function processWithdraw(withdrawId, action, note) {
             try {
-                const response = await fetch(`/admin/api/withdraws/${withdrawId}/${action}`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}/${action}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ admin_note: note || '' })
+                    body: JSON.stringify({ vfjsadrhbadmin_note: note || '' })
                 });
 
                 const result = await response.json();

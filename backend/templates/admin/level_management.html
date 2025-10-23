@@ -370,9 +370,9 @@
         </div>
         
         <div class="nav-bar">
-            <a href="/admin/">首页</a>
-            <a href="/admin/withdraws">提现管理</a>
-            <a href="/admin/levels" class="active">等级管理</a>
+            <a href="/vfjsadrhbadmin/">首页</a>
+            <a href="/vfjsadrhbadmin/withdraws">提现管理</a>
+            <a href="/vfjsadrhbadmin/levels" class="active">等级管理</a>
         </div>
         
         <div class="stats-grid" id="statsGrid">
@@ -479,7 +479,7 @@
         // 加载等级数据
         async function loadLevels() {
             try {
-                const response = await fetch('/admin/api/levels');
+                const response = await fetch('/vfjsadrhbadmin/api/levels');
                 const result = await response.json();
                 
                 if (result.data) {
@@ -497,7 +497,7 @@
         // 加载统计数据
         async function loadStats() {
             try {
-                const response = await fetch('/admin/api/level-stats');
+                const response = await fetch('/vfjsadrhbadmin/api/level-stats');
                 const result = await response.json();
                 
                 if (result.data) {
@@ -648,7 +648,7 @@
             }
             
             try {
-                const response = await fetch(`/admin/api/levels/${levelId}`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/levels/${levelId}`, {
                     method: 'DELETE'
                 });
                 
@@ -686,7 +686,7 @@
                 let response;
                 if (editingLevelId) {
                     // 更新等级
-                    response = await fetch(`/admin/api/levels/${editingLevelId}`, {
+                    response = await fetch(`/vfjsadrhbadmin/api/levels/${editingLevelId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json'
@@ -695,7 +695,7 @@
                     });
                 } else {
                     // 创建等级
-                    response = await fetch('/admin/api/levels', {
+                    response = await fetch('/vfjsadrhbadmin/api/levels', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

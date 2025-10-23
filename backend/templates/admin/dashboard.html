@@ -1447,21 +1447,21 @@
             }
             
             try {
-                const response = await fetch('/admin/api/logout', {
+                const response = await fetch('/vfjsadrhbadmin/api/logout', {
                     method: 'POST',
                     credentials: 'include'
                 });
                 
                 if (response.ok) {
                     alert('已登出');
-                    window.location.href = '/admin/login';
+                    window.location.href = '/vfjsadrhbadmin/login';
                 } else {
                     alert('登出失败');
                 }
             } catch (error) {
                 console.error('登出错误:', error);
                 // 即使出错也跳转到登录页
-                window.location.href = '/admin/login';
+                window.location.href = '/vfjsadrhbadmin/login';
             }
         }
 
@@ -1494,7 +1494,7 @@
         // 加载统计数据
         async function loadStats() {
             try {
-                const response = await fetch('/admin/api/stats');
+                const response = await fetch('/vfjsadrhbadmin/api/stats');
                 const result = await response.json();
                 
                 if (result.code === 200 && result.data) {
@@ -1544,7 +1544,7 @@
             }
             
             try {
-                const response = await fetch('/admin/api/ads', {
+                const response = await fetch('/vfjsadrhbadmin/api/ads', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(adData)
@@ -1568,7 +1568,7 @@
         // 加载广告列表
         async function loadAds() {
             try {
-                const response = await fetch('/admin/api/ads');
+                const response = await fetch('/vfjsadrhbadmin/api/ads');
                 const result = await response.json();
                 
                 const adList = document.getElementById('adList');
@@ -1651,7 +1651,7 @@
         async function loadUsers() {
             try {
                 const search = document.getElementById('userSearch').value;
-                const url = search ? `/admin/api/users?search=${encodeURIComponent(search)}` : '/admin/api/users';
+                const url = search ? `/vfjsadrhbadmin/api/users?search=${encodeURIComponent(search)}` : '/vfjsadrhbadmin/api/users';
                 
                 const response = await fetch(url);
                 const result = await response.json();
@@ -1703,7 +1703,7 @@
         async function loadWithdrawRequests() {
             try {
                 const status = document.getElementById('withdrawStatusFilter').value;
-                const url = status ? `/admin/api/withdraws?status=${status}` : '/admin/api/withdraws';
+                const url = status ? `/vfjsadrhbadmin/api/withdraws?status=${status}` : '/vfjsadrhbadmin/api/withdraws';
                 
                 const response = await fetch(url);
                 const result = await response.json();
@@ -1731,7 +1731,7 @@
                             <div>
                                 <strong>申请时间:</strong> ${new Date(withdraw.request_time).toLocaleString()}
                             </div>
-                            ${withdraw.admin_note ? `<div class="list-item-meta">备注: ${withdraw.admin_note}</div>` : ''}
+                            ${withdraw.vfjsadrhbadmin_note ? `<div class="list-item-meta">备注: ${withdraw.vfjsadrhbadmin_note}</div>` : ''}
                         </div>
                     `).join('');
                     
@@ -1784,12 +1784,12 @@
         }
 
         async function approveWithdraw(withdrawId) {
-            const adminNote = prompt('请输入审批备注（可选）:');
+            const vfjsadrhbadminNote = prompt('请输入审批备注（可选）:');
             try {
-                const response = await fetch(`/admin/api/withdraws/${withdrawId}/approve`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}/approve`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ admin_note: adminNote })
+                    body: JSON.stringify({ vfjsadrhbadmin_note: vfjsadrhbadminNote })
                 });
                 const result = await response.json();
                 
@@ -1806,17 +1806,17 @@
         }
 
         async function rejectWithdraw(withdrawId) {
-            const adminNote = prompt('请输入拒绝原因:');
-            if (!adminNote) {
+            const vfjsadrhbadminNote = prompt('请输入拒绝原因:');
+            if (!vfjsadrhbadminNote) {
                 alert('请输入拒绝原因');
                 return;
             }
             
             try {
-                const response = await fetch(`/admin/api/withdraws/${withdrawId}/reject`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}/reject`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ admin_note: adminNote })
+                    body: JSON.stringify({ vfjsadrhbadmin_note: vfjsadrhbadminNote })
                 });
                 const result = await response.json();
                 
@@ -1862,7 +1862,7 @@
         // 加载系统配置
         async function loadConfigs() {
             try {
-                const response = await fetch('/admin/api/configs');
+                const response = await fetch('/vfjsadrhbadmin/api/configs');
                 if (!response.ok) return;
                 
                 const result = await response.json();
@@ -2003,7 +2003,7 @@
             }
             
             try {
-                const response = await fetch(`/admin/api/users/${userId}`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/users/${userId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2045,7 +2045,7 @@
                     }
                 }
 
-                const response = await fetch('/admin/api/configs', {
+                const response = await fetch('/vfjsadrhbadmin/api/configs', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(configs)
@@ -2210,7 +2210,7 @@
             try {
                 console.log('发送广告更新请求:', adData);
                 
-                const response = await fetch(`/admin/api/ads/${adId}`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/ads/${adId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(adData)
@@ -2259,7 +2259,7 @@
             }
             
             try {
-                const response = await fetch(`/admin/api/ads/${adId}`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/ads/${adId}`, {
                     method: 'DELETE'
                 });
                 
@@ -2286,7 +2286,7 @@
             }
             
             try {
-                const response = await fetch(`/admin/api/ads/${adId}`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/ads/${adId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: newStatus })
@@ -2316,7 +2316,7 @@
                 const maxAmount = document.getElementById('maxAmountFilter').value;
                 const search = document.getElementById('searchFilter').value;
 
-                let url = `/admin/api/withdraws?page=${page}&size=10`;
+                let url = `/vfjsadrhbadmin/api/withdraws?page=${page}&size=10`;
                 if (status) url += `&status=${status}`;
                 if (minAmount) url += `&min_amount=${minAmount}`;
                 if (maxAmount) url += `&max_amount=${maxAmount}`;
@@ -2409,7 +2409,7 @@
         // 更新提现统计
         async function updateWithdrawStats() {
             try {
-                const response = await fetch('/admin/api/withdraws');
+                const response = await fetch('/vfjsadrhbadmin/api/withdraws');
                 const result = await response.json();
 
                 if (result.code === 200) {
@@ -2433,7 +2433,7 @@
         // 显示提现详情
         async function showWithdrawDetail(withdrawId) {
             try {
-                const response = await fetch(`/admin/api/withdraws/${withdrawId}`);
+                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}`);
                 const result = await response.json();
 
                 if (result.code === 200) {
@@ -2486,10 +2486,10 @@
                             <span class="detail-label">状态:</span>
                             <span class="detail-value"><span class="withdraw-status status-${withdraw.status}">${getStatusText(withdraw.status)}</span></span>
                         </div>
-                        ${withdraw.admin_note ? `
+                        ${withdraw.vfjsadrhbadmin_note ? `
                         <div class="detail-item">
                             <span class="detail-label">管理员备注:</span>
-                            <span class="detail-value">${withdraw.admin_note}</span>
+                            <span class="detail-value">${withdraw.vfjsadrhbadmin_note}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -2596,10 +2596,10 @@
         // 处理提现申请
         async function processWithdrawRequest(withdrawId, action, note) {
             try {
-                const response = await fetch(`/admin/api/withdraws/${withdrawId}/${action}`, {
+                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}/${action}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ admin_note: note || '' })
+                    body: JSON.stringify({ vfjsadrhbadmin_note: note || '' })
                 });
 
                 const result = await response.json();
@@ -2687,7 +2687,7 @@
         async function loadLevelStats() {
             try {
                 // 加载等级统计数据
-                const statsResponse = await fetch('/admin/api/level-stats');
+                const statsResponse = await fetch('/vfjsadrhbadmin/api/level-stats');
                 const statsResult = await statsResponse.json();
                 
                 if (statsResult.data) {
@@ -2716,7 +2716,7 @@
                 }
                 
                 // 加载等级配置列表
-                const levelsResponse = await fetch('/admin/api/levels');
+                const levelsResponse = await fetch('/vfjsadrhbadmin/api/levels');
                 const levelsResult = await levelsResponse.json();
                 
                 if (levelsResult.data) {
@@ -2896,7 +2896,7 @@
             const currentLevels = [];
             
             // 先尝试从页面缓存的数据中获取
-            fetch('/admin/api/levels')
+            fetch('/vfjsadrhbadmin/api/levels')
                 .then(response => response.json())
                 .then(data => {
                     if (data.code === 200 && data.data) {
@@ -2963,7 +2963,7 @@
                 is_active: document.getElementById('levelIsActive').checked ? 1 : 0
             };
             
-            const url = isEdit ? `/admin/api/levels/${levelId}` : '/admin/api/levels';
+            const url = isEdit ? `/vfjsadrhbadmin/api/levels/${levelId}` : '/vfjsadrhbadmin/api/levels';
             const method = isEdit ? 'PUT' : 'POST';
             
             console.log('发送数据:', levelData);
@@ -3000,7 +3000,7 @@
         
         function deleteLevelData(levelId) {
             if (confirm('确定要删除这个等级吗？')) {
-                fetch(`/admin/api/levels/${levelId}`, {
+                fetch(`/vfjsadrhbadmin/api/levels/${levelId}`, {
                     method: 'DELETE'
                 })
                 .then(response => response.json())
@@ -3021,7 +3021,7 @@
         }
         
         function loadLevelsList() {
-            fetch('/admin/api/levels')
+            fetch('/vfjsadrhbadmin/api/levels')
                 .then(response => response.json())
                 .then(data => {
                     if (data.code === 200) {
@@ -3943,7 +3943,7 @@
             }
             
             try {
-                const response = await fetch('/admin/api/change-password', {
+                const response = await fetch('/vfjsadrhbadmin/api/change-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -3962,7 +3962,7 @@
                     hideChangePasswordModal();
                     // 延迟1秒后跳转到登录页
                     setTimeout(() => {
-                        window.location.href = '/admin/login';
+                        window.location.href = '/vfjsadrhbadmin/login';
                     }, 1000);
                 } else {
                     alert(data.message || '修改密码失败');

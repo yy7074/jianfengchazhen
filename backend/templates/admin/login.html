@@ -298,7 +298,7 @@
             loginBtn.innerHTML = '<span class="loading-spinner"></span>登录中...';
             
             try {
-                const response = await fetch('/admin/api/login', {
+                const response = await fetch('/vfjsadrhbadmin/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -311,7 +311,7 @@
                 if (response.ok && data.success) {
                     showAlert('登录成功！正在跳转...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/admin/';
+                        window.location.href = '/vfjsadrhbadmin/';
                     }, 1000);
                 } else {
                     showAlert(data.message || '登录失败，请检查用户名和密码');
