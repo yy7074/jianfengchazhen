@@ -648,17 +648,47 @@ fun VersionInfoCard() {
                             
                             // 检查安装权限
                             if (ApkInstaller.canInstallUnknownApps(context)) {
+                                Log.d("UpdateDownload", "已有安装权限，直接安装")
                                 val success = ApkInstaller.installApk(context, apkFile)
                                 if (success) {
                                     showUpdateDialog = false
                                     updateMessage = "安装包已启动，请按提示完成安装"
+                                } else {
+                                    updateMessage = "启动安装失败，请重试"
                                 }
                             } else {
                                 Log.w("UpdateDownload", "需要安装未知来源应用权限")
                                 // 保存APK文件引用，等待权限授权后继续安装
                                 pendingApkFile = apkFile
-                                updateMessage = "请授权安装未知来源应用权限"
+                                updateMessage = "正在请求安装权限，请授权后返回APP..."
+                                
+                                // 请求权限
                                 ApkInstaller.requestInstallPermission(context)
+                                
+                                // 延迟检查，给用户时间授权
+                                coroutineScope.launch {
+                                    kotlinx.coroutines.delay(500) // 等待500ms
+                                    var retryCount = 0
+                                    while (retryCount < 30 && pendingApkFile != null) {  // 最多等30秒
+                                        kotlinx.coroutines.delay(1000)
+                                        if (ApkInstaller.canInstallUnknownApps(context)) {
+                                            Log.d("InstallPermission", "检测到权限已授予，立即安装")
+                                            val apk = pendingApkFile
+                                            pendingApkFile = null
+                                            if (apk != null) {
+                                                val success = ApkInstaller.installApk(context, apk)
+                                                if (success) {
+                                                    showUpdateDialog = false
+                                                    updateMessage = "安装包已启动，请按提示完成安装"
+                                                } else {
+                                                    updateMessage = "启动安装失败"
+                                                }
+                                            }
+                                            break
+                                        }
+                                        retryCount++
+                                    }
+                                }
                             }
                         } else {
                             Log.e("UpdateDownload", "下载失败")
