@@ -298,20 +298,22 @@
             loginBtn.innerHTML = '<span class="loading-spinner"></span>登录中...';
             
             try {
-                const response = await fetch('/vfjsadrhbadmin/api/login', {
+                const response = await fetch('api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ username, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     showAlert('登录成功！正在跳转...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/vfjsadrhbadmin/';
+                        // 获取当前路径的父目录
+                        const basePath = window.location.pathname.replace(/\/login\/?$/, '/');
+                        window.location.href = basePath;
                     }, 1000);
                 } else {
                     showAlert(data.message || '登录失败，请检查用户名和密码');

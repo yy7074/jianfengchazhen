@@ -382,7 +382,7 @@
                     <p>管理和审核用户提现申请，确保资金安全</p>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-secondary" onclick="location.href='/vfjsadrhbadmin/'">
+                    <button class="btn btn-secondary" onclick="location.href='./'">
                         ← 返回主控台
                     </button>
                     <button class="btn" style="background: #e74c3c;" onclick="logout()">
@@ -507,20 +507,20 @@
             }
             
             try {
-                const response = await fetch('/vfjsadrhbadmin/api/logout', {
+                const response = await fetch('api/logout', {
                     method: 'POST',
                     credentials: 'include'
                 });
                 
                 if (response.ok) {
                     alert('已登出');
-                    window.location.href = '/vfjsadrhbadmin/login';
+                    window.location.href = 'login';
                 } else {
                     alert('登出失败');
                 }
             } catch (error) {
                 console.error('登出错误:', error);
-                window.location.href = '/vfjsadrhbadmin/login';
+                window.location.href = 'login';
             }
         }
 
@@ -532,7 +532,7 @@
                 const maxAmount = document.getElementById('maxAmount').value;
                 const search = document.getElementById('searchInput').value;
 
-                let url = `/vfjsadrhbadmin/api/withdraws?page=${page}&size=10`;
+                let url = `api/withdraws?page=${page}&size=10`;
                 if (status) url += `&status=${status}`;
                 if (minAmount) url += `&min_amount=${minAmount}`;
                 if (maxAmount) url += `&max_amount=${maxAmount}`;
@@ -570,6 +570,7 @@
                     <td>
                         <div style="font-weight: 500;">${item.user_nickname}</div>
                         <div style="font-size: 12px; color: #666;">ID: ${item.user_id}</div>
+                        ${item.device_name ? `<div style="font-size: 11px; color: #999;">设备: ${item.device_name}</div>` : ''}
                     </td>
                     <td style="font-weight: 600; color: #f59e0b;">¥${item.amount}</td>
                     <td>${item.coins_used} 金币</td>
@@ -632,7 +633,7 @@
         // 更新统计信息
         async function updateStats() {
             try {
-                const response = await fetch('/vfjsadrhbadmin/api/withdraws');
+                const response = await fetch('api/withdraws');
                 const result = await response.json();
 
                 if (result.code === 200) {
@@ -656,7 +657,7 @@
         // 显示详情
         async function showDetail(withdrawId) {
             try {
-                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}`);
+                const response = await fetch(`api/withdraws/${withdrawId}`);
                 const result = await response.json();
 
                 if (result.code === 200) {
@@ -709,10 +710,10 @@
                             <span class="label">状态:</span>
                             <span class="value status-badge status-${withdraw.status}">${getStatusText(withdraw.status)}</span>
                         </div>
-                        ${withdraw.vfjsadrhbadmin_note ? `
+                        ${withdraw.admin_note ? `
                         <div class="detail-item">
                             <span class="label">管理员备注:</span>
-                            <span class="value">${withdraw.vfjsadrhbadmin_note}</span>
+                            <span class="value">${withdraw.admin_note}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -730,6 +731,10 @@
                         <div class="detail-item">
                             <span class="label">设备ID:</span>
                             <span class="value">${user.device_id}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">设备型号:</span>
+                            <span class="value">${user.device_name || '未知'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="label">当前金币:</span>
@@ -834,10 +839,10 @@
         // 处理提现审核
         async function processWithdraw(withdrawId, action, note) {
             try {
-                const response = await fetch(`/vfjsadrhbadmin/api/withdraws/${withdrawId}/${action}`, {
+                const response = await fetch(`api/withdraws/${withdrawId}/${action}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ vfjsadrhbadmin_note: note || '' })
+                    body: JSON.stringify({ admin_note: note || '' })
                 });
 
                 const result = await response.json();

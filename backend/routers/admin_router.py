@@ -4,6 +4,11 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, or_
 from database import get_db
+from config import settings
+
+def admin_login_url():
+    """获取管理后台登录URL"""
+    return f"{settings.ADMIN_PREFIX}/login"
 from schemas import *
 from services.user_service import UserService
 from services.ad_service import AdService
@@ -218,7 +223,7 @@ async def change_admin_password(
 async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     """管理后台首页"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     # 获取统计数据
     today = date.today()
@@ -295,7 +300,7 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 async def withdraw_management_page(request: Request):
     """提现审核管理页面"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     return templates.TemplateResponse("admin/withdraw_management.html", {
         "request": request
@@ -306,7 +311,7 @@ async def withdraw_management_page(request: Request):
 async def level_management_page(request: Request):
     """等级管理页面"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     return templates.TemplateResponse("admin/level_management.html", {
         "request": request
@@ -317,7 +322,7 @@ async def level_management_page(request: Request):
 async def get_admin_stats(request: Request, db: Session = Depends(get_db)):
     """获取管理后台统计数据API"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     today = date.today()
     
@@ -380,7 +385,7 @@ async def get_users_list(
 ):
     """获取用户列表"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     query = db.query(User)
     
@@ -434,7 +439,7 @@ async def get_users_list(
 async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -465,7 +470,7 @@ async def get_level_configs(request: Request, db: Session = Depends(get_db)):
 async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -495,7 +500,7 @@ async def create_level_config(request: Request, level_data: UserLevelConfigCreat
 async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -521,7 +526,7 @@ async def update_level_config(request: Request, level_id: int, level_data: UserL
 async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -534,7 +539,7 @@ async def delete_level_config(request: Request, level_id: int, db: Session = Dep
 async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -554,7 +559,7 @@ async def update_user(
 ):
     """更新用户信息"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -583,7 +588,7 @@ async def update_user(
 async def get_ads_list(request: Request, db: Session = Depends(get_db)):
     """获取广告列表"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     ads = AdService.get_all_ad_configs(db)
     # 临时简化，避免Pydantic验证问题
@@ -619,7 +624,7 @@ async def get_ads_list(request: Request, db: Session = Depends(get_db)):
 async def create_ad(request: Request, ad_data: AdConfigCreate, db: Session = Depends(get_db)):
     """创建广告"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     ad = AdService.create_ad_config(db, ad_data)
     return BaseResponse(
@@ -632,7 +637,7 @@ async def update_ad(request: Request, ad_id: int, ad_data: AdConfigUpdate, db: S
     """更新广告"""
     try:
         if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
         
         # 验证广告ID
         if ad_id <= 0:
@@ -684,7 +689,7 @@ async def update_ad(request: Request, ad_id: int, ad_data: AdConfigUpdate, db: S
 async def delete_ad(request: Request, ad_id: int, db: Session = Depends(get_db)):
     """删除广告"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     success = AdService.delete_ad_config(db, ad_id)
     if not success:
@@ -697,7 +702,7 @@ async def delete_ad(request: Request, ad_id: int, db: Session = Depends(get_db))
 async def upload_video(request: Request, file: UploadFile = File(...)):
     """上传广告视频"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     # 检查文件类型
     allowed_types = ["video/mp4", "video/avi", "video/mov", "video/wmv"]
@@ -735,7 +740,7 @@ async def upload_video(request: Request, file: UploadFile = File(...)):
 async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -766,7 +771,7 @@ async def get_level_configs(request: Request, db: Session = Depends(get_db)):
 async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -796,7 +801,7 @@ async def create_level_config(request: Request, level_data: UserLevelConfigCreat
 async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -822,7 +827,7 @@ async def update_level_config(request: Request, level_id: int, level_data: UserL
 async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -835,7 +840,7 @@ async def delete_level_config(request: Request, level_id: int, db: Session = Dep
 async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -850,7 +855,7 @@ async def get_level_stats(request: Request, db: Session = Depends(get_db)):
 async def get_system_configs(request: Request, db: Session = Depends(get_db)):
     """获取系统配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     configs = ConfigService.get_all_configs(db)
     return BaseResponse(
@@ -894,7 +899,7 @@ async def update_system_configs(
 ):
     """批量更新系统配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     success = ConfigService.update_multiple_configs(db, config_updates)
     if success:
@@ -919,7 +924,7 @@ async def get_withdraw_requests(
 ):
     """获取提现申请列表（支持高级筛选）"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     query = db.query(WithdrawRequest).join(User)
     
@@ -967,6 +972,7 @@ async def get_withdraw_requests(
     for w in withdraws:
         item = WithdrawInfo.from_orm(w).dict()
         item["user_nickname"] = w.user.nickname
+        item["device_name"] = w.user.device_name
         items.append(item)
     
     # 计算统计信息
@@ -994,7 +1000,7 @@ async def get_withdraw_requests(
 async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -1025,7 +1031,7 @@ async def get_level_configs(request: Request, db: Session = Depends(get_db)):
 async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -1055,7 +1061,7 @@ async def create_level_config(request: Request, level_data: UserLevelConfigCreat
 async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -1081,7 +1087,7 @@ async def update_level_config(request: Request, level_id: int, level_data: UserL
 async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -1094,7 +1100,7 @@ async def delete_level_config(request: Request, level_id: int, db: Session = Dep
 async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -1112,7 +1118,7 @@ async def get_withdraw_detail(
 ):
     """获取提现申请详细信息"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     # 查询提现申请
     withdraw = db.query(WithdrawRequest).filter(
@@ -1163,6 +1169,7 @@ async def get_withdraw_detail(
             "id": user.id,
             "nickname": user.nickname,
             "device_id": user.device_id,
+            "device_name": user.device_name,
             "current_coins": float(user.coins),
             "total_coins": float(user.total_coins),
             "level": user.level,
@@ -1202,16 +1209,18 @@ async def get_withdraw_detail(
 async def approve_withdraw(
     request: Request,
     withdraw_id: int,
-    request_data: dict = None,
     db: Session = Depends(get_db)
 ):
     """批准提现申请"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
-    
+            return RedirectResponse(url=admin_login_url(), status_code=302)
+
     admin_note = None
-    if request_data:
+    try:
+        request_data = await request.json()
         admin_note = request_data.get("admin_note")
+    except:
+        pass
     
     from services.withdraw_service import WithdrawService
     
@@ -1228,13 +1237,13 @@ async def approve_withdraw(
 async def reject_withdraw(
     request: Request,
     withdraw_id: int,
-    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """拒绝提现申请"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
-    
+            return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    request_data = await request.json()
     admin_note = request_data.get("admin_note", "").strip()
     if not admin_note:
         raise HTTPException(status_code=400, detail="拒绝时必须填写备注原因")
@@ -1254,13 +1263,13 @@ async def reject_withdraw(
 @router.post("/api/withdraws/batch-approve")
 async def batch_approve_withdraws(
     request: Request,
-    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """批量批准提现申请"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
-    
+            return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    request_data = await request.json()
     withdraw_ids = request_data.get("withdraw_ids", [])
     admin_note = request_data.get("admin_note", "批量批准")
     
@@ -1293,7 +1302,7 @@ async def batch_approve_withdraws(
 async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -1324,7 +1333,7 @@ async def get_level_configs(request: Request, db: Session = Depends(get_db)):
 async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -1354,7 +1363,7 @@ async def create_level_config(request: Request, level_data: UserLevelConfigCreat
 async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -1380,7 +1389,7 @@ async def update_level_config(request: Request, level_id: int, level_data: UserL
 async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -1393,7 +1402,7 @@ async def delete_level_config(request: Request, level_id: int, db: Session = Dep
 async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)
@@ -1406,13 +1415,13 @@ async def get_level_stats(request: Request, db: Session = Depends(get_db)):
 @router.post("/api/withdraws/batch-reject")
 async def batch_reject_withdraws(
     request: Request,
-    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """批量拒绝提现申请"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
-    
+            return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    request_data = await request.json()
     withdraw_ids = request_data.get("withdraw_ids", [])
     admin_note = request_data.get("admin_note", "批量拒绝")
     
@@ -1448,7 +1457,7 @@ async def batch_reject_withdraws(
 async def get_level_configs(request: Request, db: Session = Depends(get_db)):
     """获取所有等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     levels = LevelService.get_all_level_configs(db)
@@ -1479,7 +1488,7 @@ async def get_level_configs(request: Request, db: Session = Depends(get_db)):
 async def create_level_config(request: Request, level_data: UserLevelConfigCreate, db: Session = Depends(get_db)):
     """创建等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     from models import UserLevelConfig
@@ -1509,7 +1518,7 @@ async def create_level_config(request: Request, level_data: UserLevelConfigCreat
 async def update_level_config(request: Request, level_id: int, level_data: UserLevelConfigUpdate, db: Session = Depends(get_db)):
     """更新等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     level_config = LevelService.update_level_config(db, level_id, level_data)
@@ -1535,7 +1544,7 @@ async def update_level_config(request: Request, level_id: int, level_data: UserL
 async def delete_level_config(request: Request, level_id: int, db: Session = Depends(get_db)):
     """删除等级配置"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     success = LevelService.delete_level_config(db, level_id)
@@ -1548,7 +1557,7 @@ async def delete_level_config(request: Request, level_id: int, db: Session = Dep
 async def get_level_stats(request: Request, db: Session = Depends(get_db)):
     """获取等级统计信息"""
     if not verify_admin(request):
-            return RedirectResponse(url="/admin/login", status_code=302)
+            return RedirectResponse(url=admin_login_url(), status_code=302)
     
     from services.level_service import LevelService
     stats = LevelService.get_level_stats(db)

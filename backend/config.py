@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     APP_NAME: str = "见缝插针游戏"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
+
+    # 服务器配置
+    SERVER_HOST: str = "0.0.0.0"
+    SERVER_PORT: int = 3000
+
+    # 管理后台路径前缀（用于安全隐藏后台入口）
+    ADMIN_PREFIX: str = "/vfjsadrhbadmin"
+
+    # API文档路径（设为空字符串则禁用）
+    DOCS_URL: str = "/vfjsadrhbdocs"       # Swagger文档
+    REDOC_URL: str = "/vfjsadrhbredoc"     # ReDoc文档
+    OPENAPI_URL: str = "/vfjsadrhbopenapi" # OpenAPI JSON
     
     class Config:
         env_file = ".env"

@@ -1,0 +1,224 @@
+2025-12-30 18:07:11,916 INFO sqlalchemy.engine.Engine SELECT DATABASE()
+2025-12-30 18:07:11,917 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,917 INFO sqlalchemy.engine.Engine SELECT @@sql_mode
+2025-12-30 18:07:11,917 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,917 INFO sqlalchemy.engine.Engine SELECT @@lower_case_table_names
+2025-12-30 18:07:11,917 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,918 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-30 18:07:11,918 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`users`
+2025-12-30 18:07:11,918 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,923 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`ad_configs`
+2025-12-30 18:07:11,923 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,925 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`ad_watch_records`
+2025-12-30 18:07:11,925 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,926 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`system_configs`
+2025-12-30 18:07:11,926 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,927 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`coin_transactions`
+2025-12-30 18:07:11,927 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,928 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`withdraw_requests`
+2025-12-30 18:07:11,928 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,929 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`game_records`
+2025-12-30 18:07:11,929 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,930 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`user_level_configs`
+2025-12-30 18:07:11,930 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,932 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`admins`
+2025-12-30 18:07:11,932 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,934 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`app_versions`
+2025-12-30 18:07:11,934 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:11,938 INFO sqlalchemy.engine.Engine COMMIT
+/Users/yy/Documents/GitHub/jianfengchazhen/backend/main.py:76: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+INFO:     Will watch for changes in these directories: ['/Users/yy/Documents/GitHub/jianfengchazhen/backend']
+INFO:     Uvicorn running on http://0.0.0.0:3000 (Press CTRL+C to quit)
+INFO:     Started reloader process [72732] using WatchFiles
+2025-12-30 18:07:12,564 INFO sqlalchemy.engine.Engine SELECT DATABASE()
+2025-12-30 18:07:12,564 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,565 INFO sqlalchemy.engine.Engine SELECT @@sql_mode
+2025-12-30 18:07:12,565 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,565 INFO sqlalchemy.engine.Engine SELECT @@lower_case_table_names
+2025-12-30 18:07:12,565 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,566 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-30 18:07:12,566 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`users`
+2025-12-30 18:07:12,566 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,568 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`ad_configs`
+2025-12-30 18:07:12,568 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,570 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`ad_watch_records`
+2025-12-30 18:07:12,570 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,572 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`system_configs`
+2025-12-30 18:07:12,573 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,574 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`coin_transactions`
+2025-12-30 18:07:12,574 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,576 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`withdraw_requests`
+2025-12-30 18:07:12,576 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,577 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`game_records`
+2025-12-30 18:07:12,577 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,578 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`user_level_configs`
+2025-12-30 18:07:12,578 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,579 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`admins`
+2025-12-30 18:07:12,579 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,580 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`app_versions`
+2025-12-30 18:07:12,580 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,582 INFO sqlalchemy.engine.Engine COMMIT
+2025-12-30 18:07:12,693 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-30 18:07:12,693 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`users`
+2025-12-30 18:07:12,693 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,694 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`ad_configs`
+2025-12-30 18:07:12,694 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,696 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`ad_watch_records`
+2025-12-30 18:07:12,696 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,697 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`system_configs`
+2025-12-30 18:07:12,697 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,699 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`coin_transactions`
+2025-12-30 18:07:12,699 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,701 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`withdraw_requests`
+2025-12-30 18:07:12,701 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,703 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`game_records`
+2025-12-30 18:07:12,703 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,704 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`user_level_configs`
+2025-12-30 18:07:12,704 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,706 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`admins`
+2025-12-30 18:07:12,706 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,708 INFO sqlalchemy.engine.Engine DESCRIBE `game_db`.`app_versions`
+2025-12-30 18:07:12,708 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-12-30 18:07:12,709 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     Started server process [72735]
+INFO:     Waiting for application startup.
+2025-12-30 18:07:12,747 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-30 18:07:12,748 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,748 INFO sqlalchemy.engine.Engine [generated in 0.00011s] {'config_key_1': 'coin_to_rmb_rate', 'param_1': 1}
+2025-12-30 18:07:12,750 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,750 INFO sqlalchemy.engine.Engine [cached since 0.001442s ago] {'config_key_1': 'min_withdraw_amount', 'param_1': 1}
+2025-12-30 18:07:12,751 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,751 INFO sqlalchemy.engine.Engine [cached since 0.002274s ago] {'config_key_1': 'max_withdraw_amount', 'param_1': 1}
+2025-12-30 18:07:12,752 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,752 INFO sqlalchemy.engine.Engine [cached since 0.00328s ago] {'config_key_1': 'daily_ad_limit', 'param_1': 1}
+2025-12-30 18:07:12,752 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,752 INFO sqlalchemy.engine.Engine [cached since 0.003893s ago] {'config_key_1': 'game_reward_coins', 'param_1': 1}
+2025-12-30 18:07:12,753 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,753 INFO sqlalchemy.engine.Engine [cached since 0.004431s ago] {'config_key_1': 'register_reward_coins', 'param_1': 1}
+2025-12-30 18:07:12,753 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,753 INFO sqlalchemy.engine.Engine [cached since 0.004994s ago] {'config_key_1': 'level_up_reward_coins', 'param_1': 1}
+2025-12-30 18:07:12,754 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,754 INFO sqlalchemy.engine.Engine [cached since 0.005663s ago] {'config_key_1': 'max_daily_game_rewards', 'param_1': 1}
+2025-12-30 18:07:12,754 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,755 INFO sqlalchemy.engine.Engine [cached since 0.006154s ago] {'config_key_1': 'ad_reward_coins_min', 'param_1': 1}
+2025-12-30 18:07:12,755 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,755 INFO sqlalchemy.engine.Engine [cached since 0.006581s ago] {'config_key_1': 'ad_reward_coins_max', 'param_1': 1}
+2025-12-30 18:07:12,755 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,755 INFO sqlalchemy.engine.Engine [cached since 0.007008s ago] {'config_key_1': 'ad_reward_coins_default', 'param_1': 1}
+2025-12-30 18:07:12,756 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,756 INFO sqlalchemy.engine.Engine [cached since 0.007431s ago] {'config_key_1': 'video_ad_min_duration', 'param_1': 1}
+2025-12-30 18:07:12,756 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,756 INFO sqlalchemy.engine.Engine [cached since 0.007879s ago] {'config_key_1': 'webpage_ad_min_duration', 'param_1': 1}
+2025-12-30 18:07:12,757 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,757 INFO sqlalchemy.engine.Engine [cached since 0.008455s ago] {'config_key_1': 'exchange_rate_enabled', 'param_1': 1}
+2025-12-30 18:07:12,757 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,757 INFO sqlalchemy.engine.Engine [cached since 0.008907s ago] {'config_key_1': 'exchange_rate_update_interval', 'param_1': 1}
+2025-12-30 18:07:12,758 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,758 INFO sqlalchemy.engine.Engine [cached since 0.00931s ago] {'config_key_1': 'withdrawal_fee_rate', 'param_1': 1}
+2025-12-30 18:07:12,758 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,758 INFO sqlalchemy.engine.Engine [cached since 0.009709s ago] {'config_key_1': 'withdrawal_min_coins', 'param_1': 1}
+2025-12-30 18:07:12,758 INFO sqlalchemy.engine.Engine SELECT system_configs.id AS system_configs_id, system_configs.config_key AS system_configs_config_key, system_configs.config_value AS system_configs_config_value, system_configs.description AS system_configs_description, system_configs.updated_time AS system_configs_updated_time 
+FROM system_configs 
+WHERE system_configs.config_key = %(config_key_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,758 INFO sqlalchemy.engine.Engine [cached since 0.0101s ago] {'config_key_1': 'daily_withdraw_limit', 'param_1': 1}
+2025-12-30 18:07:12,759 INFO sqlalchemy.engine.Engine COMMIT
+✅ 默认配置初始化完成
+2025-12-30 18:07:12,759 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-30 18:07:12,761 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM (SELECT ad_configs.id AS ad_configs_id, ad_configs.name AS ad_configs_name, ad_configs.ad_type AS ad_configs_ad_type, ad_configs.video_url AS ad_configs_video_url, ad_configs.webpage_url AS ad_configs_webpage_url, ad_configs.image_url AS ad_configs_image_url, ad_configs.duration AS ad_configs_duration, ad_configs.reward_coins AS ad_configs_reward_coins, ad_configs.daily_limit AS ad_configs_daily_limit, ad_configs.min_watch_duration AS ad_configs_min_watch_duration, ad_configs.weight AS ad_configs_weight, ad_configs.status AS ad_configs_status, ad_configs.start_time AS ad_configs_start_time, ad_configs.end_time AS ad_configs_end_time, ad_configs.created_time AS ad_configs_created_time, ad_configs.updated_time AS ad_configs_updated_time 
+FROM ad_configs) AS anon_1
+2025-12-30 18:07:12,762 INFO sqlalchemy.engine.Engine [generated in 0.00011s] {}
+✅ 默认广告初始化完成
+2025-12-30 18:07:12,767 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM (SELECT user_level_configs.id AS user_level_configs_id, user_level_configs.level AS user_level_configs_level, user_level_configs.level_name AS user_level_configs_level_name, user_level_configs.ad_coin_multiplier AS user_level_configs_ad_coin_multiplier, user_level_configs.game_coin_multiplier AS user_level_configs_game_coin_multiplier, user_level_configs.min_experience AS user_level_configs_min_experience, user_level_configs.max_experience AS user_level_configs_max_experience, user_level_configs.description AS user_level_configs_description, user_level_configs.is_active AS user_level_configs_is_active, user_level_configs.created_time AS user_level_configs_created_time, user_level_configs.updated_time AS user_level_configs_updated_time 
+FROM user_level_configs) AS anon_1
+2025-12-30 18:07:12,767 INFO sqlalchemy.engine.Engine [generated in 0.00012s] {}
+✅ 默认等级配置初始化完成
+2025-12-30 18:07:12,769 INFO sqlalchemy.engine.Engine SELECT admins.id AS admins_id, admins.username AS admins_username, admins.password_hash AS admins_password_hash, admins.email AS admins_email, admins.`role` AS admins_role, admins.last_login_time AS admins_last_login_time, admins.created_time AS admins_created_time, admins.status AS admins_status 
+FROM admins 
+WHERE admins.username = %(username_1)s 
+ LIMIT %(param_1)s
+2025-12-30 18:07:12,769 INFO sqlalchemy.engine.Engine [generated in 0.00006s] {'username_1': 'admin', 'param_1': 1}
+ℹ️  管理员账号已存在
+2025-12-30 18:07:12,769 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     Application startup complete.
+INFO:     127.0.0.1:50162 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     39.71.188.94:0 - "GET / HTTP/1.1" 200 OK
+INFO:     39.71.188.94:0 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     39.71.188.94:0 - "GET / HTTP/1.1" 200 OK
+INFO:     39.71.188.94:0 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50353 - "GET /?1=1576 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50353 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50353 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50353 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50353 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50353 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50353 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50353 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50353 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50353 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50355 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50355 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [72735]
+INFO:     Stopping reloader process [72732]

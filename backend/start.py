@@ -87,28 +87,33 @@ def init_database():
     
     return True
 
-def start_server(host="0.0.0.0", port=3001, reload=True):
+def start_server():
     """启动服务器"""
-    
-    print(f"\n🚀 启动服务器...")
-    print(f"📍 地址: http://{host}:{port}")
-    print(f"📖 API文档: http://{host}:{port}/docs")
-    print(f"🔧 管理后台: http://{host}:{port}/admin")
+    from config import settings
+
+    host = settings.SERVER_HOST
+    port = settings.SERVER_PORT
+
+    print(f"\n启动服务器...")
+    print(f"地址: http://{host}:{port}")
+    if settings.DOCS_URL:
+        print(f"API文档: http://{host}:{port}{settings.DOCS_URL}")
+    print(f"管理后台: http://{host}:{port}{settings.ADMIN_PREFIX}/")
     print("\n按 Ctrl+C 停止服务器\n")
-    
+
     try:
         import uvicorn
         uvicorn.run(
             "main:app",
             host=host,
             port=port,
-            reload=reload,
+            reload=settings.DEBUG,
             log_level="info"
         )
     except KeyboardInterrupt:
-        print("\n👋 服务器已停止")
+        print("\n服务器已停止")
     except Exception as e:
-        print(f"❌ 服务器启动失败: {e}")
+        print(f"服务器启动失败: {e}")
 
 def main():
     """主函数"""

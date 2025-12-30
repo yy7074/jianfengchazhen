@@ -9,6 +9,9 @@ engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=300,
+    pool_size=20,           # 连接池基础大小
+    max_overflow=30,        # 允许额外创建的连接数（总共最多50个连接）
+    pool_timeout=60,        # 等待连接的超时时间（秒）
     echo=settings.DEBUG
 )
 

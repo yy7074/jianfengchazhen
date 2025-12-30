@@ -43,3 +43,4 @@ GROUP BY DATE(created_time), type
 ORDER BY date DESC, type
 LIMIT 20;
 
+
