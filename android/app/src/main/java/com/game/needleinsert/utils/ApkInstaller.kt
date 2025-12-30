@@ -18,6 +18,8 @@ import java.net.URL
  */
 object ApkInstaller {
     private const val TAG = "ApkInstaller"
+    private const val PREFS_NAME = "apk_installer_prefs"
+    private const val KEY_PENDING_APK_PATH = "pending_apk_path"
     
     /**
      * 下载APK文件
@@ -207,5 +209,60 @@ object ApkInstaller {
         } catch (e: Exception) {
             Log.e(TAG, "清理APK文件失败", e)
         }
+    }
+
+    /**
+     * 保存待安装的APK路径（用于权限授权后恢复安装）
+     */
+    fun savePendingApkPath(context: Context, apkFile: File) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_PENDING_APK_PATH, apkFile.absolutePath).apply()
+        Log.d(TAG, "保存待安装APK路径: ${apkFile.absolutePath}")
+    }
+
+    /**
+     * 获取待安装的APK文件
+     */
+    fun getPendingApkFile(context: Context): File? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val path = prefs.getString(KEY_PENDING_APK_PATH, null)
+        if (path != null) {
+            val file = File(path)
+            if (file.exists()) {
+                Log.d(TAG, "找到待安装APK: $path")
+                return file
+            }
+        }
+        return null
+    }
+
+    /**
+     * 清除待安装的APK路径
+     */
+    fun clearPendingApkPath(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().remove(KEY_PENDING_APK_PATH).apply()
+        Log.d(TAG, "清除待安装APK路径")
+    }
+
+    /**
+     * 检查并安装待处理的APK（用于权限授权返回后调用）
+     */
+    fun checkAndInstallPendingApk(context: Context): Boolean {
+        if (!canInstallUnknownApps(context)) {
+            Log.d(TAG, "尚未获得安装权限")
+            return false
+        }
+
+        val pendingApk = getPendingApkFile(context)
+        if (pendingApk != null) {
+            Log.d(TAG, "权限已授予，安装待处理的APK")
+            val success = installApk(context, pendingApk)
+            if (success) {
+                clearPendingApkPath(context)
+            }
+            return success
+        }
+        return false
     }
 }

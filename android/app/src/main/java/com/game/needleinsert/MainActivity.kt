@@ -156,6 +156,16 @@ fun MainNavigation() {
         }
     }
     
+    // 启动时检查是否有待安装的APK（处理权限授权返回后的情况）
+    LaunchedEffect(Unit) {
+        // 延迟一下确保 Activity 完全恢复
+        kotlinx.coroutines.delay(500)
+        if (ApkInstaller.checkAndInstallPendingApk(context)) {
+            Log.d("InstallPermission", "已自动安装待处理的APK")
+            showUpdateDialog = false
+        }
+    }
+
     // 监听权限状态变化，处理权限授权后的安装
     LaunchedEffect(pendingApkFile) {
         pendingApkFile?.let { apkFile ->
@@ -166,6 +176,7 @@ fun MainNavigation() {
                     val success = ApkInstaller.installApk(context, apkFile)
                     if (success) {
                         showUpdateDialog = false
+                        ApkInstaller.clearPendingApkPath(context)
                     }
                     pendingApkFile = null
                     break
@@ -287,7 +298,8 @@ fun MainNavigation() {
                                 }
                             } else {
                                 Log.w("UpdateDownload", "需要安装未知来源应用权限")
-                                // 保存APK文件引用，等待权限授权后继续安装
+                                // 保存APK文件路径到SharedPreferences，权限授权后恢复安装
+                                ApkInstaller.savePendingApkPath(context, apkFile)
                                 pendingApkFile = apkFile
                                 ApkInstaller.requestInstallPermission(context)
                             }

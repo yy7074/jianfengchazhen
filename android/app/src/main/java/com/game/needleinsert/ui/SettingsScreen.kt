@@ -658,10 +658,11 @@ fun VersionInfoCard() {
                                 }
                             } else {
                                 Log.w("UpdateDownload", "需要安装未知来源应用权限")
-                                // 保存APK文件引用，等待权限授权后继续安装
+                                // 保存APK文件路径到SharedPreferences，权限授权后恢复安装
+                                ApkInstaller.savePendingApkPath(context, apkFile)
                                 pendingApkFile = apkFile
                                 updateMessage = "正在请求安装权限，请授权后返回APP..."
-                                
+
                                 // 请求权限
                                 ApkInstaller.requestInstallPermission(context)
                                 
@@ -678,6 +679,7 @@ fun VersionInfoCard() {
                                             if (apk != null) {
                                                 val success = ApkInstaller.installApk(context, apk)
                                                 if (success) {
+                                                    ApkInstaller.clearPendingApkPath(context)
                                                     showUpdateDialog = false
                                                     updateMessage = "安装包已启动，请按提示完成安装"
                                                 } else {
