@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # 服务器配置
     SERVER_HOST: str = "0.0.0.0"
-    SERVER_PORT: int = 3000
+    SERVER_PORT: int = 3001
 
     # 管理后台路径前缀（用于安全隐藏后台入口）
     ADMIN_PREFIX: str = "/vfjsadrhbadmin"
