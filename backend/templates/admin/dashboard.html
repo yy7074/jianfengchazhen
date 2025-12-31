@@ -760,6 +760,10 @@
                 <span class="menu-icon">👥</span>
                 用户管理
             </div>
+            <div class="menu-item" onclick="showPage('ip')">
+                <span class="menu-icon">🛡️</span>
+                IP管理
+            </div>
             <div class="menu-item" onclick="showPage('withdraws')">
                 <span class="menu-icon">💸</span>
                 提现审核
@@ -996,6 +1000,113 @@
                             <div class="empty-subtitle">点击"搜索"按钮加载用户列表</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IP管理页面 -->
+        <div id="ip-page" class="page-content">
+            <div class="page-header">
+                <div class="page-title">🛡️ IP管理</div>
+                <div class="page-subtitle">监控可疑IP、管理黑名单、防止异常访问</div>
+            </div>
+
+            <!-- IP统计概览 -->
+            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">⚠️</div>
+                    <div class="stat-value" id="suspiciousIPCount">-</div>
+                    <div class="stat-label">可疑IP数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">🚫</div>
+                    <div class="stat-value" id="blockedIPCount">-</div>
+                    <div class="stat-label">已封禁IP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">✅</div>
+                    <div class="stat-value" id="normalIPCount">-</div>
+                    <div class="stat-label">正常IP</div>
+                </div>
+            </div>
+
+            <!-- 可疑IP列表 -->
+            <div class="content-card" style="margin-bottom: 20px;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">⚠️</span>
+                        可疑IP列表
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-warning" onclick="autoDetectIPs()">🤖 自动检测</button>
+                        <button class="btn btn-primary" onclick="loadSuspiciousIPs()">🔄 刷新</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="suspiciousIPList" class="list-container">
+                        <div class="empty-state">
+                            <div class="empty-icon">🛡️</div>
+                            <div class="empty-title">暂无可疑IP</div>
+                            <div class="empty-subtitle">点击"刷新"加载可疑IP列表</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IP黑名单 -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">🚫</span>
+                        IP黑名单
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-danger" onclick="showManualBlockDialog()">➕ 手动封禁</button>
+                        <button class="btn btn-primary" onclick="loadIPBlacklist()">🔄 刷新</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="ipBlacklist" class="list-container">
+                        <div class="empty-state">
+                            <div class="empty-icon">🚫</div>
+                            <div class="empty-title">暂无封禁IP</div>
+                            <div class="empty-subtitle">点击"刷新"加载黑名单</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手动封禁IP对话框 -->
+        <div id="blockIPDialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 30px; border-radius: 12px; width: 400px; max-width: 90%;">
+                <h3 style="margin-bottom: 20px;">🚫 手动封禁IP</h3>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">IP地址</label>
+                    <input type="text" id="blockIPAddress" class="form-input" placeholder="例如: 192.168.1.100">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">封禁原因</label>
+                    <input type="text" id="blockIPReason" class="form-input" placeholder="请输入封禁原因">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">封禁时长（小时，留空为永久）</label>
+                    <input type="number" id="blockIPDuration" class="form-input" placeholder="24">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="hideManualBlockDialog()">取消</button>
+                    <button class="btn btn-danger" onclick="manualBlockIP()">确认封禁</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- IP详情对话框 -->
+        <div id="ipDetailDialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 30px; border-radius: 12px; width: 600px; max-width: 90%; max-height: 80vh; overflow-y: auto;">
+                <h3 style="margin-bottom: 20px;">🔍 IP详情分析</h3>
+                <div id="ipDetailContent">加载中...</div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button class="btn btn-secondary" onclick="hideIPDetailDialog()">关闭</button>
                 </div>
             </div>
         </div>
@@ -1488,6 +1599,9 @@
                 loadUsers(); // 自动加载用户列表
             } else if (pageId === 'withdraws') {
                 loadWithdrawRequests(); // 自动加载提现申请
+            } else if (pageId === 'ip') {
+                loadSuspiciousIPs(); // 自动加载可疑IP
+                loadIPBlacklist(); // 自动加载黑名单
             }
         }
 
@@ -1652,22 +1766,25 @@
             try {
                 const search = document.getElementById('userSearch').value;
                 const url = search ? `api/users?search=${encodeURIComponent(search)}` : 'api/users';
-                
+
                 const response = await fetch(url);
                 const result = await response.json();
-                
+
                 const userList = document.getElementById('userList');
-                
+
                 if (result.code === 200 && result.data && result.data.items && result.data.items.length > 0) {
                     userList.innerHTML = result.data.items.map(user => `
-                        <div class="list-item">
+                        <div class="list-item" style="${user.ip_risk_level === 'high' ? 'border-left: 4px solid #ef4444;' : user.ip_risk_level === 'medium' ? 'border-left: 4px solid #f59e0b;' : ''}">
                             <div class="list-item-header">
                                 <div>
                                     <strong>${user.nickname || user.username || user.device_id}</strong>
                                     <span class="status-badge status-active">等级 ${user.level}</span>
+                                    ${user.ip_risk_level === 'high' ? '<span class="status-badge" style="background: #fee2e2; color: #dc2626;">🚨 高风险IP</span>' : ''}
+                                    ${user.ip_risk_level === 'medium' ? '<span class="status-badge" style="background: #fef3c7; color: #d97706;">⚠️ 可疑IP</span>' : ''}
                                 </div>
                                 <div style="display: flex; gap: 10px; align-items: center;">
                                     <span class="status-badge status-warning">${user.coins} 金币</span>
+                                    ${user.ip_risk_level && user.ip_risk_level !== 'normal' ? `<button class="btn btn-warning" onclick="viewUserIPs(${user.id})" style="padding: 4px 8px; font-size: 12px;">查看IP</button>` : ''}
                                     <button class="btn btn-primary" onclick="editUser(${user.id}, '${user.nickname || ''}', ${user.coins}, ${user.level}, ${user.experience})" style="padding: 4px 8px; font-size: 12px;">编辑</button>
                                 </div>
                             </div>
@@ -1698,6 +1815,366 @@
                 `;
             }
         }
+
+        // ==================== IP管理相关函数 ====================
+
+        // 加载可疑IP列表
+        async function loadSuspiciousIPs() {
+            try {
+                const response = await fetch('api/ip/suspicious');
+                const result = await response.json();
+
+                const listEl = document.getElementById('suspiciousIPList');
+                document.getElementById('suspiciousIPCount').textContent = result.data?.length || 0;
+
+                if (result.code === 200 && result.data && result.data.length > 0) {
+                    listEl.innerHTML = result.data.map(ip => `
+                        <div class="list-item" style="border-left: 4px solid ${ip.risk_level === 'high' ? '#ef4444' : '#f59e0b'};">
+                            <div class="list-item-header">
+                                <div>
+                                    <strong>${ip.ip_address}</strong>
+                                    <span class="status-badge" style="background: ${ip.risk_level === 'high' ? '#fee2e2' : '#fef3c7'}; color: ${ip.risk_level === 'high' ? '#dc2626' : '#d97706'};">
+                                        ${ip.risk_level === 'high' ? '🚨 高风险' : '⚠️ 可疑'}
+                                    </span>
+                                    ${ip.is_blocked ? '<span class="status-badge" style="background: #fecaca; color: #dc2626;">已封禁</span>' : ''}
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn btn-primary" onclick="analyzeIP('${ip.ip_address}')" style="padding: 4px 8px; font-size: 12px;">分析</button>
+                                    ${!ip.is_blocked ? `<button class="btn btn-danger" onclick="blockIP('${ip.ip_address}', '可疑IP自动检测')" style="padding: 4px 8px; font-size: 12px;">封禁</button>` : ''}
+                                </div>
+                            </div>
+                            <div>
+                                <strong>关联用户数:</strong> ${ip.user_count} |
+                                <strong>今日请求:</strong> ${ip.request_count}次
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">✅</div>
+                            <div class="empty-title">暂无可疑IP</div>
+                            <div class="empty-subtitle">当前没有检测到可疑的IP地址</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('suspiciousIPList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">❌</div>
+                        <div class="empty-title">加载失败</div>
+                        <div class="empty-subtitle">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // 加载IP黑名单
+        async function loadIPBlacklist() {
+            try {
+                const response = await fetch('api/ip/blacklist?is_active=1');
+                const result = await response.json();
+
+                const listEl = document.getElementById('ipBlacklist');
+                document.getElementById('blockedIPCount').textContent = result.data?.total || 0;
+
+                if (result.code === 200 && result.data && result.data.items && result.data.items.length > 0) {
+                    listEl.innerHTML = result.data.items.map(ip => `
+                        <div class="list-item" style="border-left: 4px solid #ef4444;">
+                            <div class="list-item-header">
+                                <div>
+                                    <strong>${ip.ip_address}</strong>
+                                    <span class="status-badge" style="background: #fee2e2; color: #dc2626;">🚫 已封禁</span>
+                                    <span class="status-badge" style="background: #e5e7eb; color: #374151;">${ip.block_type === 'auto' ? '自动' : '手动'}</span>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn btn-primary" onclick="analyzeIP('${ip.ip_address}')" style="padding: 4px 8px; font-size: 12px;">分析</button>
+                                    <button class="btn btn-success" onclick="unblockIP('${ip.ip_address}')" style="padding: 4px 8px; font-size: 12px;">解封</button>
+                                </div>
+                            </div>
+                            <div>
+                                <strong>封禁原因:</strong> ${ip.reason || '未说明'}<br>
+                                <strong>封禁时间:</strong> ${ip.blocked_time ? new Date(ip.blocked_time).toLocaleString() : '-'}
+                                ${ip.expire_time ? ` | <strong>过期时间:</strong> ${new Date(ip.expire_time).toLocaleString()}` : ' | <strong>永久封禁</strong>'}
+                            </div>
+                            ${ip.related_user_ids ? `<div class="list-item-meta">关联用户ID: ${ip.related_user_ids}</div>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">✅</div>
+                            <div class="empty-title">暂无封禁IP</div>
+                            <div class="empty-subtitle">当前没有被封禁的IP地址</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('ipBlacklist').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">❌</div>
+                        <div class="empty-title">加载失败</div>
+                        <div class="empty-subtitle">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // 封禁IP
+        async function blockIP(ipAddress, reason, durationHours = null) {
+            if (!confirm(`确定要封禁IP ${ipAddress} 吗？`)) return;
+
+            try {
+                const response = await fetch('api/ip/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ip_address: ipAddress,
+                        reason: reason,
+                        duration_hours: durationHours
+                    })
+                });
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    alert('✅ IP已封禁');
+                    loadSuspiciousIPs();
+                    loadIPBlacklist();
+                } else {
+                    alert('❌ 封禁失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ 封禁失败: ' + error.message);
+            }
+        }
+
+        // 解封IP
+        async function unblockIP(ipAddress) {
+            if (!confirm(`确定要解封IP ${ipAddress} 吗？`)) return;
+
+            try {
+                const response = await fetch('api/ip/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip_address: ipAddress })
+                });
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    alert('✅ IP已解封');
+                    loadIPBlacklist();
+                    loadSuspiciousIPs();
+                } else {
+                    alert('❌ 解封失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ 解封失败: ' + error.message);
+            }
+        }
+
+        // 分析IP详情
+        async function analyzeIP(ipAddress) {
+            document.getElementById('ipDetailDialog').style.display = 'flex';
+            document.getElementById('ipDetailContent').innerHTML = '加载中...';
+
+            try {
+                const response = await fetch(`api/ip/analyze/${encodeURIComponent(ipAddress)}`);
+                const result = await response.json();
+
+                if (result.code === 200 && result.data) {
+                    const data = result.data;
+                    let usersHtml = '';
+                    if (data.users && data.users.length > 0) {
+                        usersHtml = `
+                            <h4 style="margin: 15px 0 10px;">关联用户 (${data.users.length})</h4>
+                            <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px;">
+                                ${data.users.map(u => `
+                                    <div style="padding: 8px; border-bottom: 1px solid #f3f4f6;">
+                                        <strong>${u.nickname || u.device_id}</strong> (ID: ${u.id})
+                                        <span style="margin-left: 10px; color: #6b7280;">${u.coins} 金币</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    let anomaliesHtml = '';
+                    if (data.anomalies && data.anomalies.length > 0) {
+                        anomaliesHtml = `
+                            <h4 style="margin: 15px 0 10px; color: #dc2626;">⚠️ 异常信息</h4>
+                            <ul style="margin: 0; padding-left: 20px; color: #dc2626;">
+                                ${data.anomalies.map(a => `<li>${a}</li>`).join('')}
+                            </ul>
+                        `;
+                    }
+
+                    document.getElementById('ipDetailContent').innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                            <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+                                <div style="color: #6b7280; font-size: 12px;">IP地址</div>
+                                <div style="font-size: 18px; font-weight: 600;">${data.ip_address}</div>
+                            </div>
+                            <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+                                <div style="color: #6b7280; font-size: 12px;">风险等级</div>
+                                <div style="font-size: 18px; font-weight: 600; color: ${data.risk_level === 'high' ? '#dc2626' : data.risk_level === 'medium' ? '#d97706' : '#10b981'};">
+                                    ${data.risk_level === 'high' ? '🚨 高风险' : data.risk_level === 'medium' ? '⚠️ 中风险' : '✅ 正常'}
+                                </div>
+                            </div>
+                            <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+                                <div style="color: #6b7280; font-size: 12px;">关联用户数</div>
+                                <div style="font-size: 18px; font-weight: 600;">${data.user_count}</div>
+                            </div>
+                            <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+                                <div style="color: #6b7280; font-size: 12px;">今日请求数</div>
+                                <div style="font-size: 18px; font-weight: 600;">${data.today_requests}</div>
+                            </div>
+                            <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+                                <div style="color: #6b7280; font-size: 12px;">最近1小时请求</div>
+                                <div style="font-size: 18px; font-weight: 600;">${data.hourly_requests}</div>
+                            </div>
+                            <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+                                <div style="color: #6b7280; font-size: 12px;">封禁状态</div>
+                                <div style="font-size: 18px; font-weight: 600; color: ${data.is_blocked ? '#dc2626' : '#10b981'};">
+                                    ${data.is_blocked ? '🚫 已封禁' : '✅ 正常'}
+                                </div>
+                            </div>
+                        </div>
+                        ${anomaliesHtml}
+                        ${usersHtml}
+                        <div style="margin-top: 20px; text-align: center;">
+                            ${!data.is_blocked ? `<button class="btn btn-danger" onclick="blockIP('${data.ip_address}', '手动封禁'); hideIPDetailDialog();">封禁此IP</button>` : `<button class="btn btn-success" onclick="unblockIP('${data.ip_address}'); hideIPDetailDialog();">解封此IP</button>`}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('ipDetailContent').innerHTML = '<p style="color: #dc2626;">加载失败: ' + (result.message || '未知错误') + '</p>';
+                }
+            } catch (error) {
+                document.getElementById('ipDetailContent').innerHTML = '<p style="color: #dc2626;">加载失败: ' + error.message + '</p>';
+            }
+        }
+
+        // 查看用户IP历史
+        async function viewUserIPs(userId) {
+            document.getElementById('ipDetailDialog').style.display = 'flex';
+            document.getElementById('ipDetailContent').innerHTML = '加载中...';
+
+            try {
+                const response = await fetch(`api/user/${userId}/ips`);
+                const result = await response.json();
+
+                if (result.code === 200 && result.data && result.data.length > 0) {
+                    document.getElementById('ipDetailContent').innerHTML = `
+                        <h4 style="margin-bottom: 15px;">用户ID: ${userId} 的IP使用记录</h4>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${result.data.map(ip => `
+                                <div class="list-item" style="margin-bottom: 10px; ${ip.is_blocked ? 'border-left: 4px solid #ef4444;' : ip.is_suspicious ? 'border-left: 4px solid #f59e0b;' : ''}">
+                                    <div class="list-item-header">
+                                        <div>
+                                            <strong>${ip.ip_address}</strong>
+                                            ${ip.is_blocked ? '<span class="status-badge" style="background: #fee2e2; color: #dc2626;">已封禁</span>' : ''}
+                                            ${ip.is_suspicious ? '<span class="status-badge" style="background: #fef3c7; color: #d97706;">可疑</span>' : ''}
+                                        </div>
+                                        <button class="btn btn-primary" onclick="analyzeIP('${ip.ip_address}')" style="padding: 4px 8px; font-size: 12px;">分析</button>
+                                    </div>
+                                    <div style="font-size: 13px; color: #6b7280;">
+                                        请求次数: ${ip.request_count} | 关联用户: ${ip.user_count} |
+                                        最后使用: ${ip.last_seen ? new Date(ip.last_seen).toLocaleString() : '-'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('ipDetailContent').innerHTML = '<p>暂无IP记录</p>';
+                }
+            } catch (error) {
+                document.getElementById('ipDetailContent').innerHTML = '<p style="color: #dc2626;">加载失败: ' + error.message + '</p>';
+            }
+        }
+
+        // 自动检测异常IP
+        async function autoDetectIPs() {
+            if (!confirm('确定要执行自动检测吗？这将自动封禁严重异常的IP。')) return;
+
+            try {
+                const response = await fetch('api/ip/auto-detect', { method: 'POST' });
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    const blocked = result.data?.blocked || [];
+                    if (blocked.length > 0) {
+                        alert(`✅ 自动检测完成，已封禁 ${blocked.length} 个异常IP`);
+                    } else {
+                        alert('✅ 自动检测完成，未发现需要封禁的IP');
+                    }
+                    loadSuspiciousIPs();
+                    loadIPBlacklist();
+                } else {
+                    alert('❌ 检测失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ 检测失败: ' + error.message);
+            }
+        }
+
+        // 显示手动封禁对话框
+        function showManualBlockDialog() {
+            document.getElementById('blockIPDialog').style.display = 'flex';
+            document.getElementById('blockIPAddress').value = '';
+            document.getElementById('blockIPReason').value = '';
+            document.getElementById('blockIPDuration').value = '';
+        }
+
+        // 隐藏手动封禁对话框
+        function hideManualBlockDialog() {
+            document.getElementById('blockIPDialog').style.display = 'none';
+        }
+
+        // 手动封禁IP
+        async function manualBlockIP() {
+            const ipAddress = document.getElementById('blockIPAddress').value.trim();
+            const reason = document.getElementById('blockIPReason').value.trim();
+            const duration = document.getElementById('blockIPDuration').value;
+
+            if (!ipAddress) {
+                alert('请输入IP地址');
+                return;
+            }
+            if (!reason) {
+                alert('请输入封禁原因');
+                return;
+            }
+
+            try {
+                const response = await fetch('api/ip/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ip_address: ipAddress,
+                        reason: reason,
+                        duration_hours: duration ? parseInt(duration) : null
+                    })
+                });
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    alert('✅ IP已封禁');
+                    hideManualBlockDialog();
+                    loadIPBlacklist();
+                } else {
+                    alert('❌ 封禁失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ 封禁失败: ' + error.message);
+            }
+        }
+
+        // 隐藏IP详情对话框
+        function hideIPDetailDialog() {
+            document.getElementById('ipDetailDialog').style.display = 'none';
+        }
+
+        // ==================== IP管理函数结束 ====================
 
         // 加载提现申请列表
         async function loadWithdrawRequests() {
@@ -2682,8 +3159,14 @@
                     loadVersionStats();
                     loadVersionsList();
                 }
+
+                // 如果是IP管理页面，加载数据
+                if (pageId === 'ip') {
+                    loadSuspiciousIPs();
+                    loadIPBlacklist();
+                }
             }
-            
+
             // 设置对应菜单项为active
             event.target.classList.add('active');
         }

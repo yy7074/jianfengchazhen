@@ -211,7 +211,7 @@ class Admin(Base):
 
 class AppVersion(Base):
     __tablename__ = "app_versions"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     version_name = Column(String(20), nullable=False, comment="版本名称，如1.0.0")
     version_code = Column(Integer, nullable=False, comment="版本号，递增整数")
@@ -226,9 +226,47 @@ class AppVersion(Base):
     publish_time = Column(DateTime, comment="发布时间")
     created_time = Column(DateTime, default=func.now())
     updated_time = Column(DateTime, default=func.now(), onupdate=func.now())
-    
+
     # 索引
     __table_args__ = (
         Index('idx_platform_version', 'platform', 'version_code'),
         Index('idx_status', 'status'),
+    )
+
+
+class IPBlacklist(Base):
+    """IP黑名单"""
+    __tablename__ = "ip_blacklist"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_address = Column(String(45), unique=True, nullable=False, comment="IP地址")
+    reason = Column(String(500), comment="封禁原因")
+    block_type = Column(String(20), default="manual", comment="封禁类型：manual=手动, auto=自动")
+    related_user_ids = Column(Text, comment="关联的用户ID列表，逗号分隔")
+    request_count = Column(Integer, default=0, comment="异常请求次数")
+    is_active = Column(Integer, default=1, comment="是否生效：1是，0否")
+    blocked_time = Column(DateTime, default=func.now(), comment="封禁时间")
+    expire_time = Column(DateTime, comment="过期时间，null表示永久")
+    created_time = Column(DateTime, default=func.now())
+    updated_time = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index('idx_ip_active', 'ip_address', 'is_active'),
+    )
+
+
+class IPAccessLog(Base):
+    """IP访问日志（用于异常检测）"""
+    __tablename__ = "ip_access_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_address = Column(String(45), nullable=False, comment="IP地址")
+    user_id = Column(Integer, comment="关联用户ID")
+    endpoint = Column(String(200), comment="访问接口")
+    request_count = Column(Integer, default=1, comment="请求次数")
+    access_date = Column(DateTime, default=func.now(), comment="访问日期")
+
+    __table_args__ = (
+        Index('idx_ip_date', 'ip_address', 'access_date'),
+        Index('idx_user_ip', 'user_id', 'ip_address'),
     ) 

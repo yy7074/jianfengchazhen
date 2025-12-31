@@ -15,7 +15,7 @@ async def get_random_ad(user_id: str, db: Session = Depends(get_db)):
     user = UserService.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    
+
     # 获取随机广告
     ad = AdService.get_random_ad(db, user_id)
     if not ad:
@@ -24,16 +24,19 @@ async def get_random_ad(user_id: str, db: Session = Depends(get_db)):
             message="暂无可观看的广告",
             data=None
         )
-    
+
     # 转换为字典并计算用户实际能获得的金币
     ad_data = AdConfigInfo.from_orm(ad).dict()
-    
-    # 根据用户等级计算实际奖励金币
+
+    # 优化：一次性获取等级配置
     from services.level_service import LevelService
+    level_config = LevelService.get_user_level_config(db, user.level)
+    multiplier = float(level_config.ad_coin_multiplier) if level_config else 1.0
+
     base_coins = float(ad.reward_coins) if ad.reward_coins > 0 else 100.0
-    actual_reward = LevelService.calculate_ad_coins(db, user.level, base_coins)
-    ad_data['reward_coins'] = int(actual_reward)  # 更新为用户实际能获得的金币
-    
+    actual_reward = round(base_coins * multiplier, 2)
+    ad_data['reward_coins'] = int(actual_reward)
+
     return BaseResponse(
         message="获取成功",
         data=ad_data
@@ -138,42 +141,52 @@ async def get_user_ad_history(
 @router.get("/available/{user_id}")
 async def get_available_ads(user_id: str, db: Session = Depends(get_db)):
     """获取用户可观看的广告列表"""
-    from datetime import date
-    from sqlalchemy import func, and_, or_
-    
+    from datetime import date, datetime
+    from sqlalchemy import func, or_
+
     user = UserService.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    
+
     # 获取所有有效广告
-    from datetime import datetime
     now = datetime.now()
     all_ads = db.query(AdConfig).filter(
         AdConfig.status == 'ACTIVE',
         or_(AdConfig.start_time.is_(None), AdConfig.start_time <= now),
         or_(AdConfig.end_time.is_(None), AdConfig.end_time >= now)
     ).all()
-    
-    # 计算用户今日观看次数的广告数据转换
-    available_ads = []
+
     today = date.today()
-    
+
+    # 优化：一次性查询用户今日所有广告的观看次数（避免N+1查询）
+    watch_counts = db.query(
+        AdWatchRecord.ad_id,
+        func.count(AdWatchRecord.id).label('count')
+    ).filter(
+        AdWatchRecord.user_id == user_id,
+        func.date(AdWatchRecord.watch_time) == today
+    ).group_by(AdWatchRecord.ad_id).all()
+
+    # 转换为字典方便查找
+    watch_count_dict = {wc.ad_id: wc.count for wc in watch_counts}
+
+    # 优化：一次性获取等级配置（避免每个广告都查询一次）
+    from services.level_service import LevelService
+    level_config = LevelService.get_user_level_config(db, user.level)
+    multiplier = float(level_config.ad_coin_multiplier) if level_config else 1.0
+
+    available_ads = []
     for ad in all_ads:
-        # 查询用户今日对该广告的观看次数
-        watched_today = db.query(func.count(AdWatchRecord.id)).filter(
-            AdWatchRecord.user_id == user_id,
-            AdWatchRecord.ad_id == ad.id,
-            func.date(AdWatchRecord.watch_time) == today
-        ).scalar() or 0
-        
+        # 从字典中获取观看次数，避免循环查询
+        watched_today = watch_count_dict.get(ad.id, 0)
+
         # 计算剩余观看次数
         remaining_today = max(0, (ad.daily_limit or 10) - watched_today)
-        
-        # 计算用户实际能获得的金币（基础金币 × 等级倍数）
+
+        # 直接使用已查询的倍率计算金币
         base_coins = float(ad.reward_coins or 0)
-        from services.level_service import LevelService
-        actual_coins = LevelService.calculate_ad_coins(db, user.level, base_coins)
-        
+        actual_coins = round(base_coins * multiplier, 2)
+
         ad_data = {
             "id": ad.id,
             "name": ad.name,
@@ -191,11 +204,11 @@ async def get_available_ads(user_id: str, db: Session = Depends(get_db)):
             "watched_today": watched_today,
             "user_level": user.level  # 用户等级
         }
-        
+
         # 只返回还有剩余观看次数的广告
         if remaining_today > 0:
             available_ads.append(ad_data)
-    
+
     return BaseResponse(
         message="获取成功",
         data={

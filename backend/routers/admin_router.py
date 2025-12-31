@@ -381,14 +381,17 @@ async def get_users_list(
     page: int = 1,
     size: int = 20,
     search: str = None,
+    suspicious_only: bool = False,
     db: Session = Depends(get_db)
 ):
-    """获取用户列表"""
+    """获取用户列表（含IP异常信息）"""
     if not verify_admin(request):
-            return RedirectResponse(url=admin_login_url(), status_code=302)
-    
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    from services.ip_service import IPService
+
     query = db.query(User)
-    
+
     if search:
         query = query.filter(
             or_(
@@ -397,14 +400,29 @@ async def get_users_list(
                 User.username.contains(search)
             )
         )
-    
+
     total = query.count()
     skip = (page - 1) * size
     users = query.order_by(User.register_time.desc()).offset(skip).limit(size).all()
-    
-    # 手动构建用户数据，避免Pydantic验证问题
+
+    # 批量获取用户IP信息
     users_data = []
     for user in users:
+        # 获取用户的IP列表
+        user_ips = IPService.get_user_ips(db, user.id)
+
+        # 统计IP风险信息
+        blocked_ip_count = sum(1 for ip in user_ips if ip.get("is_blocked"))
+        suspicious_ip_count = sum(1 for ip in user_ips if ip.get("is_suspicious"))
+        total_ip_count = len(user_ips)
+
+        # 判断用户风险等级
+        risk_level = "normal"
+        if blocked_ip_count > 0:
+            risk_level = "blocked"
+        elif suspicious_ip_count > 0:
+            risk_level = "suspicious"
+
         user_data = {
             "id": user.id,
             "device_id": user.device_id,
@@ -419,10 +437,28 @@ async def get_users_list(
             "game_count": user.game_count or 0,
             "best_score": user.best_score or 0,
             "last_login_time": user.last_login_time.isoformat() if user.last_login_time else None,
-            "register_time": user.register_time.isoformat() if user.register_time else None
+            "register_time": user.register_time.isoformat() if user.register_time else None,
+            "status": user.status.value if hasattr(user.status, 'value') else user.status,
+            # IP风险信息
+            "ip_info": {
+                "total_ips": total_ip_count,
+                "blocked_ips": blocked_ip_count,
+                "suspicious_ips": suspicious_ip_count,
+                "risk_level": risk_level,
+                "recent_ip": user_ips[0]["ip_address"] if user_ips else None
+            }
         }
+
+        # 如果只查看可疑用户
+        if suspicious_only and risk_level == "normal":
+            continue
+
         users_data.append(user_data)
-    
+
+    # 如果过滤了可疑用户，需要重新计算总数
+    if suspicious_only:
+        total = len(users_data)
+
     return BaseResponse(
         message="获取成功",
         data={
@@ -1566,3 +1602,169 @@ async def get_level_stats(request: Request, db: Session = Depends(get_db)):
         message="获取成功",
         data=stats
     ) 
+
+# ==================== IP管理相关API ====================
+
+@router.get("/api/ip/suspicious")
+async def get_suspicious_ips(request: Request, db: Session = Depends(get_db)):
+    """获取可疑IP列表"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    from services.ip_service import IPService
+    suspicious_ips = IPService.get_suspicious_ips(db)
+
+    return BaseResponse(
+        message="获取成功",
+        data=suspicious_ips
+    )
+
+
+@router.get("/api/ip/blacklist")
+async def get_ip_blacklist(
+    request: Request,
+    page: int = 1,
+    size: int = 20,
+    is_active: int = None,
+    db: Session = Depends(get_db)
+):
+    """获取IP黑名单列表"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    from services.ip_service import IPService
+    result = IPService.get_blacklist(db, page, size, is_active)
+
+    return BaseResponse(
+        message="获取成功",
+        data=result
+    )
+
+
+@router.get("/api/ip/analyze/{ip_address:path}")
+async def analyze_ip(request: Request, ip_address: str, db: Session = Depends(get_db)):
+    """分析指定IP的异常情况"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    from services.ip_service import IPService
+    analysis = IPService.analyze_ip_anomaly(db, ip_address)
+
+    return BaseResponse(
+        message="获取成功",
+        data=analysis
+    )
+
+
+@router.get("/api/user/{user_id}/ips")
+async def get_user_ips(request: Request, user_id: int, db: Session = Depends(get_db)):
+    """获取用户使用过的所有IP"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    from services.ip_service import IPService
+    ips = IPService.get_user_ips(db, user_id)
+
+    return BaseResponse(
+        message="获取成功",
+        data=ips
+    )
+
+
+@router.post("/api/ip/block")
+async def block_ip(request: Request, db: Session = Depends(get_db)):
+    """封禁IP"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    body = await request.json()
+    ip_address = body.get("ip_address")
+    reason = body.get("reason", "手动封禁")
+    duration_hours = body.get("duration_hours")  # None表示永久
+
+    if not ip_address:
+        raise HTTPException(status_code=400, detail="IP地址不能为空")
+
+    from services.ip_service import IPService
+
+    # 获取关联用户
+    users = IPService.get_ip_users(db, ip_address)
+    user_ids = [u["id"] for u in users]
+
+    result = IPService.block_ip(
+        db, ip_address, reason,
+        block_type="manual",
+        duration_hours=duration_hours,
+        related_user_ids=user_ids
+    )
+
+    if result["success"]:
+        return BaseResponse(message=result["message"], data={"id": result["id"]})
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+
+@router.post("/api/ip/unblock")
+async def unblock_ip(request: Request, db: Session = Depends(get_db)):
+    """解封IP"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    body = await request.json()
+    ip_address = body.get("ip_address")
+
+    if not ip_address:
+        raise HTTPException(status_code=400, detail="IP地址不能为空")
+
+    from services.ip_service import IPService
+    result = IPService.unblock_ip(db, ip_address)
+
+    if result["success"]:
+        return BaseResponse(message=result["message"])
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+
+@router.post("/api/ip/auto-detect")
+async def auto_detect_ips(request: Request, db: Session = Depends(get_db)):
+    """自动检测并封禁异常IP"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    from services.ip_service import IPService
+    blocked = IPService.auto_detect_and_block(db)
+
+    return BaseResponse(
+        message=f"自动检测完成，封禁了{len(blocked)}个IP",
+        data={"blocked_ips": blocked}
+    )
+
+
+@router.put("/api/users/{user_id}/status")
+async def update_user_status(
+    request: Request,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """更新用户状态（禁用/启用）"""
+    if not verify_admin(request):
+        return RedirectResponse(url=admin_login_url(), status_code=302)
+
+    body = await request.json()
+    new_status = body.get("status")  # 1=启用, 0=禁用
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    if new_status == 0:
+        user.status = UserStatus.DISABLED
+    else:
+        user.status = UserStatus.ACTIVE
+
+    db.commit()
+
+    return BaseResponse(
+        message=f"用户已{'禁用' if new_status == 0 else '启用'}",
+        data={"user_id": user_id, "status": new_status}
+    )
