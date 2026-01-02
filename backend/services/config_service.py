@@ -141,9 +141,9 @@ class ConfigService:
             ("level_up_reward_coins", "50", "升级奖励金币"),
             ("max_daily_game_rewards", "10", "每日最大游戏奖励次数"),
             # 广告奖励配置
-            ("ad_reward_coins_min", "50", "观看广告最小奖励金币"),
-            ("ad_reward_coins_max", "200", "观看广告最大奖励金币"),
-            ("ad_reward_coins_default", "100", "观看广告默认奖励金币"),
+            ("ad_reward_coins_min", "30", "观看广告最小奖励金币"),
+            ("ad_reward_coins_max", "40", "观看广告最大奖励金币"),
+            ("ad_reward_coins_default", "36", "观看广告默认奖励金币"),
             ("video_ad_min_duration", "15", "视频广告最小观看时长（秒）"),
             ("webpage_ad_min_duration", "10", "网页广告最小观看时长（秒）"),
             # 兑换比例设置
@@ -206,14 +206,14 @@ class ConfigService:
     @staticmethod
     def get_ad_reward_coins_range(db: Session) -> tuple:
         """获取广告奖励金币范围"""
-        min_coins = float(ConfigService.get_config(db, "ad_reward_coins_min", "50"))
-        max_coins = float(ConfigService.get_config(db, "ad_reward_coins_max", "200"))
+        min_coins = float(ConfigService.get_config(db, "ad_reward_coins_min", "30"))
+        max_coins = float(ConfigService.get_config(db, "ad_reward_coins_max", "40"))
         return min_coins, max_coins
     
     @staticmethod
     def get_ad_reward_coins_default(db: Session) -> float:
         """获取默认广告奖励金币"""
-        return float(ConfigService.get_config(db, "ad_reward_coins_default", "100"))
+        return float(ConfigService.get_config(db, "ad_reward_coins_default", "36"))
     
     @staticmethod
     def get_video_ad_min_duration(db: Session) -> int:

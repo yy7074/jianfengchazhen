@@ -74,48 +74,43 @@ class WithdrawViewModel : ViewModel() {
                 
                 // 从服务器刷新用户信息
                 val refreshedUser = UserManager.refreshUserInfo()
-                if (refreshedUser != null) {
-                    // 获取动态兑换比例
-                    val coinToRmbRate = loadExchangeRate(context)
-                    val withdrawableAmount = refreshedUser.coins / coinToRmbRate
-                    val exchangeRateText = "${coinToRmbRate.toInt()}金币 ≈ ¥1.00"
-                    
-                    // 保留已填充的提现信息（如果当前状态为空，使用保存的值）
-                    val finalAlipay = if (currentState.alipayAccount.isBlank()) savedAlipay else currentState.alipayAccount
-                    val finalName = if (currentState.realName.isBlank()) savedName else currentState.realName
-                    
-                    // 创建新的状态对象，避免类型转换问题，保留提现信息
-                    val newState = WithdrawUiState(
-                        isLoading = false,
-                        isSubmitting = currentState.isSubmitting,
-                        currentCoins = refreshedUser.coins,
-                        withdrawableAmount = withdrawableAmount,
-                        selectedAmount = currentState.selectedAmount,
-                        alipayAccount = finalAlipay,  // 保留提现信息
-                        realName = finalName,  // 保留提现信息
-                        withdrawHistory = currentState.withdrawHistory,
-                        message = currentState.message,
-                        error = null,
-                        coinToRmbRate = coinToRmbRate,
-                        exchangeRateText = exchangeRateText
-                    )
-                    _uiState.value = newState
-                    Log.d("WithdrawViewModel", "用户信息刷新后保留提现信息: alipay=$finalAlipay, name=$finalName")
-                    
-                    Log.d("WithdrawViewModel", "用户信息已刷新: 金币=${refreshedUser.coins}")
-                } else {
-                    val newState = currentState.copy(
-                        isLoading = false,
-                        error = "用户未登录或刷新失败"
-                    )
-                    _uiState.value = newState
-                }
+
+                // 获取动态兑换比例
+                val coinToRmbRate = loadExchangeRate(context)
+                val withdrawableAmount = refreshedUser.coins / coinToRmbRate
+                val exchangeRateText = "${coinToRmbRate.toInt()}金币 ≈ ¥1.00"
+
+                // 保留已填充的提现信息（如果当前状态为空，使用保存的值）
+                val finalAlipay = if (currentState.alipayAccount.isBlank()) savedAlipay else currentState.alipayAccount
+                val finalName = if (currentState.realName.isBlank()) savedName else currentState.realName
+
+                // 创建新的状态对象，避免类型转换问题，保留提现信息
+                val newState = WithdrawUiState(
+                    isLoading = false,
+                    isSubmitting = currentState.isSubmitting,
+                    currentCoins = refreshedUser.coins,
+                    withdrawableAmount = withdrawableAmount,
+                    selectedAmount = currentState.selectedAmount,
+                    alipayAccount = finalAlipay,  // 保留提现信息
+                    realName = finalName,  // 保留提现信息
+                    withdrawHistory = currentState.withdrawHistory,
+                    message = currentState.message,
+                    error = null,
+                    coinToRmbRate = coinToRmbRate,
+                    exchangeRateText = exchangeRateText
+                )
+                _uiState.value = newState
+                Log.d("WithdrawViewModel", "用户信息刷新后保留提现信息: alipay=$finalAlipay, name=$finalName")
+
+                Log.d("WithdrawViewModel", "用户信息已刷新: 金币=${refreshedUser.coins}")
             } catch (e: Exception) {
-                Log.e("WithdrawViewModel", "加载用户信息失败", e)
+                Log.e("WithdrawViewModel", "加载用户信息失败: ${e.message}", e)
                 val currentState = _uiState.value
+                // 显示详细的错误信息
+                val errorMessage = e.message ?: "加载失败，请重试"
                 val newState = currentState.copy(
                     isLoading = false,
-                    error = "加载失败: ${e.message}"
+                    error = errorMessage
                 )
                 _uiState.value = newState
             }

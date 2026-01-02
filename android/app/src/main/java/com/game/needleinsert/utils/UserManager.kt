@@ -292,37 +292,65 @@ object UserManager {
     suspend fun refreshUserInfo(): User? {
         return withContext(Dispatchers.IO) {
             try {
-                val user = currentUser ?: return@withContext null
-                
+                val user = currentUser ?: throw Exception("用户未登录")
+
                 // 验证用户ID是否有效
                 if (user.id.isBlank()) {
-                    Log.e(TAG, "用户ID为空，无法刷新用户信息")
-                    return@withContext null
+                    throw Exception("用户ID无效，请重新登录")
                 }
-                
+
                 Log.d(TAG, "刷新用户信息: ${user.id}")
-                
+
                 val response = RetrofitClient.getApiService().getUserInfo(user.id)
-                
-                if (response.isSuccessful && response.body()?.code == 200) {
-                    val userData = response.body()?.data
-                    Log.d(TAG, "刷新用户信息成功: $userData")
-                    
-                    // 直接使用Gson解析的User对象
-                    val refreshedUser = userData ?: return@withContext null
-                    
-                    // 更新本地用户信息
-                    updateUserInfo(refreshedUser)
-                    
-                    Log.d(TAG, "用户信息已刷新: ${refreshedUser.nickname}, 金币: ${refreshedUser.coins}")
-                    refreshedUser
-                } else {
-                    Log.e(TAG, "刷新用户信息失败: ${response.body()?.message}")
-                    null
+
+                // 处理HTTP错误（429, 403等）
+                if (!response.isSuccessful) {
+                    val errorBody = response.errorBody()?.string()
+                    val errorMessage = try {
+                        val gson = com.google.gson.Gson()
+                        val errorResponse = gson.fromJson(errorBody, object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type) as Map<String, Any>
+
+                        // 优先使用message字段，然后是detail字段
+                        val message = errorResponse["message"] as? String
+                        val data = errorResponse["data"] as? Map<String, Any>
+                        val reason = data?.get("reason") as? String
+
+                        when {
+                            reason != null && message != null -> "$message ($reason)"
+                            message != null -> message
+                            else -> "请求失败，请稍后重试"
+                        }
+                    } catch (e: Exception) {
+                        when (response.code()) {
+                            429 -> "请求过于频繁，请稍后再试"
+                            403 -> "访问被拒绝，请联系管理员"
+                            else -> "服务器错误(${response.code()})"
+                        }
+                    }
+                    throw Exception(errorMessage)
                 }
+
+                // 处理业务错误
+                if (response.body()?.code != 200) {
+                    val message = response.body()?.message ?: "刷新失败"
+                    throw Exception(message)
+                }
+
+                val userData = response.body()?.data
+                Log.d(TAG, "刷新用户信息成功: $userData")
+
+                // 直接使用Gson解析的User对象
+                val refreshedUser = userData ?: throw Exception("服务器返回数据为空")
+
+                // 更新本地用户信息
+                updateUserInfo(refreshedUser)
+
+                Log.d(TAG, "用户信息已刷新: ${refreshedUser.nickname}, 金币: ${refreshedUser.coins}")
+                refreshedUser
             } catch (e: Exception) {
-                Log.e(TAG, "刷新用户信息请求失败", e)
-                null
+                Log.e(TAG, "刷新用户信息失败: ${e.message}", e)
+                // 重新抛出异常，让调用者处理
+                throw e
             }
         }
     }

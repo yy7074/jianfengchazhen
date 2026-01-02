@@ -27,7 +27,7 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
         # 严格速率限制配置
         self.limits = {
             'register': {'requests': 2, 'window': 3600},      # 注册: 1小时2次（极严格）
-            'login': {'requests': 5, 'window': 60},           # 登录: 1分钟5次
+            'login': {'requests': 30, 'window': 60},          # 登录: 1分钟30次（放宽限制）
             'ad_watch': {'requests': 30, 'window': 3600},     # 看广告: 1小时30次
             'ad_random': {'requests': 50, 'window': 3600},    # 获取广告: 1小时50次
             'default': {'requests': 20, 'window': 60}         # 默认: 1分钟20次
@@ -38,7 +38,7 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
             'register': 300,      # 注册间隔：5分钟
             'ad_watch': 3,        # 看广告间隔：3秒
             'ad_random': 2,       # 获取广告间隔：2秒
-            'default': 1          # 默认间隔：1秒
+            'default': 0.3        # 默认间隔：0.3秒（放宽限制，适应APP并发请求）
         }
 
         # 自动封禁配置
@@ -67,23 +67,47 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
             logger.warning(f"🚫 黑名单IP访问: {client_ip} -> {path}")
             return JSONResponse(
                 status_code=403,
-                content={"code": 403, "message": "Access denied", "data": None}
+                content={
+                    "code": 403,
+                    "message": "您的IP地址已被封禁，无法访问",
+                    "data": {
+                        "reason": "IP已被加入黑名单",
+                        "ip": client_ip,
+                        "contact": "如有疑问请联系管理员"
+                    }
+                }
             )
 
         # 2. 检查请求间隔（防止高频请求）
-        if not self._check_request_interval(client_ip, path):
+        interval_check = self._check_request_interval(client_ip, path)
+        if not interval_check['allowed']:
             self._record_violation(client_ip, "interval")
+            action_name = {
+                'register': '注册',
+                'login': '登录',
+                'ad_watch': '观看广告',
+                'ad_random': '获取广告',
+                'default': '请求'
+            }.get(interval_check['action'], '请求')
+
             return JSONResponse(
                 status_code=429,
                 content={
                     "code": 429,
-                    "message": "请求过快，请放慢速度",
-                    "data": {"reason": "请求间隔过短"}
+                    "message": f"{action_name}过于频繁，请稍后再试",
+                    "data": {
+                        "reason": "请求间隔过短",
+                        "action": action_name,
+                        "min_interval": interval_check['min_interval'],
+                        "actual_interval": round(interval_check['elapsed'], 1),
+                        "retry_after": round(interval_check['retry_after'], 1)
+                    }
                 }
             )
 
         # 3. 检查速率限制
-        if not self._check_rate_limit(client_ip, path):
+        rate_check = self._check_rate_limit(client_ip, path)
+        if not rate_check['allowed']:
             self._record_violation(client_ip, "rate_limit")
 
             # 检查是否需要自动封禁
@@ -94,16 +118,34 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
                     content={
                         "code": 403,
                         "message": "由于频繁违规，您的IP已被封禁24小时",
-                        "data": None
+                        "data": {
+                            "reason": "频繁违规自动封禁",
+                            "ban_duration": "24小时"
+                        }
                     }
                 )
+
+            action_name = {
+                'register': '注册',
+                'login': '登录',
+                'ad_watch': '观看广告',
+                'ad_random': '获取广告',
+                'default': '请求'
+            }.get(rate_check['action'], '请求')
 
             return JSONResponse(
                 status_code=429,
                 content={
                     "code": 429,
-                    "message": "请求次数超限，请稍后再试",
-                    "data": {"reason": "超过速率限制"}
+                    "message": f"{action_name}次数已达上限，请稍后再试",
+                    "data": {
+                        "reason": "超过速率限制",
+                        "action": action_name,
+                        "current_count": rate_check['current_count'],
+                        "max_requests": rate_check['max_requests'],
+                        "time_window": f"{rate_check['window']}秒",
+                        "retry_after": rate_check['retry_after']
+                    }
                 }
             )
 
@@ -137,7 +179,7 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
         else:
             return 'default'
 
-    def _check_request_interval(self, ip: str, path: str) -> bool:
+    def _check_request_interval(self, ip: str, path: str) -> dict:
         """检查请求间隔"""
         try:
             action = self._get_action_type(path)
@@ -149,14 +191,21 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
             if last_time:
                 elapsed = time.time() - float(last_time)
                 if elapsed < min_interval:
-                    logger.warning(f"⚡ 请求过快: {ip} -> {action} (间隔{elapsed:.1f}秒)")
-                    return False
+                    retry_after = min_interval - elapsed
+                    logger.warning(f"⚡ 请求过快: {ip} -> {action} (间隔{elapsed:.1f}秒，需要{min_interval}秒)")
+                    return {
+                        'allowed': False,
+                        'action': action,
+                        'min_interval': min_interval,
+                        'elapsed': elapsed,
+                        'retry_after': retry_after
+                    }
 
-            return True
+            return {'allowed': True}
 
         except Exception as e:
             logger.error(f"间隔检查失败: {e}")
-            return True  # 优雅降级
+            return {'allowed': True}  # 优雅降级
 
     def _record_request_time(self, ip: str, path: str):
         """记录请求时间"""
@@ -167,7 +216,7 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
         except Exception:
             pass
 
-    def _check_rate_limit(self, ip: str, path: str) -> bool:
+    def _check_rate_limit(self, ip: str, path: str) -> dict:
         """检查速率限制"""
         try:
             action = self._get_action_type(path)
@@ -181,19 +230,30 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
 
             if current is None:
                 redis_client.setex(redis_key, window, 1)
-                return True
+                return {'allowed': True}
             else:
                 current_count = int(current)
                 if current_count >= max_requests:
-                    logger.warning(f"📊 超速率限制: {ip} -> {action} ({current_count}/{max_requests})")
-                    return False
+                    # 获取剩余过期时间
+                    ttl = redis_client.ttl(redis_key)
+                    retry_after = ttl if ttl > 0 else window
+
+                    logger.warning(f"📊 超速率限制: {ip} -> {action} ({current_count}/{max_requests}，{retry_after}秒后重置)")
+                    return {
+                        'allowed': False,
+                        'action': action,
+                        'current_count': current_count,
+                        'max_requests': max_requests,
+                        'window': window,
+                        'retry_after': retry_after
+                    }
                 else:
                     redis_client.incr(redis_key)
-                    return True
+                    return {'allowed': True}
 
         except Exception as e:
             logger.error(f"速率检查失败: {e}")
-            return True  # 优雅降级
+            return {'allowed': True}  # 优雅降级
 
     def _record_violation(self, ip: str, violation_type: str):
         """记录违规行为"""

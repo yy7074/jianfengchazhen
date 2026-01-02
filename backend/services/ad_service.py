@@ -377,7 +377,7 @@ class AdService:
                 "ad_type": "video",
                 "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                 "duration": 30,
-                "reward_coins": default_reward,  # 使用配置的默认值
+                "reward_coins": 36,  # 30-40双数
                 "daily_limit": 5,
                 "min_watch_duration": ConfigService.get_video_ad_min_duration(db),
                 "weight": 3,
@@ -388,7 +388,7 @@ class AdService:
                 "ad_type": "video",
                 "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
                 "duration": 25,
-                "reward_coins": max_coins,  # 使用配置的最大值
+                "reward_coins": 40,  # 30-40双数
                 "daily_limit": 3,
                 "min_watch_duration": ConfigService.get_video_ad_min_duration(db),
                 "weight": 2,
@@ -399,7 +399,7 @@ class AdService:
                 "ad_type": "video",
                 "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
                 "duration": 15,
-                "reward_coins": 30,
+                "reward_coins": 32,  # 30-40双数
                 "daily_limit": 10,
                 "min_watch_duration": 10,
                 "weight": 5,
@@ -408,9 +408,9 @@ class AdService:
             {
                 "name": "购物广告",
                 "ad_type": "video",
-                "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", 
+                "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
                 "duration": 20,
-                "reward_coins": 60,
+                "reward_coins": 38,  # 30-40双数
                 "daily_limit": 4,
                 "min_watch_duration": 15,
                 "weight": 3,
