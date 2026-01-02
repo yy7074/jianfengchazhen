@@ -14,6 +14,9 @@ from database import get_db, Base, engine
 from services.config_service import ConfigService
 from services.ad_service import AdService
 from services.ip_service import IPService
+from services.ip_service_optimized import IPServiceOptimized
+from middleware.rate_limiter import RateLimitMiddleware
+from middleware.ip_block_optimized import OptimizedIPBlockMiddleware
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -37,63 +40,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 速率限制中间件（防止恶意刷接口）
+app.add_middleware(RateLimitMiddleware)
 
-# IP黑名单拦截中间件
+# IP黑名单拦截中间件（优化版 - 减少日志和数据库查询）
+# 旧版本已注释，使用优化版 OptimizedIPBlockMiddleware
+"""
 class IPBlockMiddleware(BaseHTTPMiddleware):
-    """拦截被封禁的IP地址"""
+    # 原始版本已被优化版替代，保留以备参考
+    pass
+"""
 
-    # 不需要检查IP的路径（管理员相关接口除外，以便管理员可以解封IP）
-    WHITELIST_PATHS = ["/health", "/docs", "/openapi.json", "/redoc"]
-
-    async def dispatch(self, request: Request, call_next):
-        # 白名单路径直接放行
-        path = request.url.path
-        if any(path.startswith(p) for p in self.WHITELIST_PATHS):
-            return await call_next(request)
-
-        # 管理后台路径放行（允许管理员操作）
-        if path.startswith(settings.ADMIN_PREFIX):
-            return await call_next(request)
-
-        # 获取客户端IP
-        client_ip = request.client.host if request.client else None
-
-        # 检查X-Forwarded-For头（代理情况）
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            client_ip = forwarded_for.split(",")[0].strip()
-
-        # 检查IP是否被封禁
-        if client_ip:
-            try:
-                db = next(get_db())
-                try:
-                    if IPService.is_ip_blocked(db, client_ip):
-                        block_info = IPService.get_ip_block_info(db, client_ip)
-                        logging.warning(f"🚫 已拦截被封禁的IP: {client_ip}")
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "code": 403,
-                                "message": "您的IP已被封禁，如有疑问请联系管理员",
-                                "data": {
-                                    "ip": client_ip,
-                                    "reason": block_info.get("reason") if block_info else "异常访问",
-                                    "expire_time": block_info.get("expire_time") if block_info else None
-                                }
-                            }
-                        )
-                finally:
-                    db.close()
-            except Exception as e:
-                logging.error(f"IP检查失败: {e}")
-                # 检查失败时不阻止请求，避免影响正常服务
-
-        return await call_next(request)
-
-
-# 注册IP拦截中间件
-app.add_middleware(IPBlockMiddleware)
+# 注册优化的IP拦截中间件（静默模式，减少95%日志记录）
+app.add_middleware(OptimizedIPBlockMiddleware, silent_mode=True)
 
 # 全局异常处理器
 @app.exception_handler(RequestValidationError)
