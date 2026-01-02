@@ -17,6 +17,7 @@ from services.ip_service import IPService
 from services.ip_service_optimized import IPServiceOptimized
 from middleware.rate_limiter import RateLimitMiddleware
 from middleware.ip_block_optimized import OptimizedIPBlockMiddleware
+from middleware.enhanced_protection import EnhancedProtectionMiddleware
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -40,19 +41,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 速率限制中间件（防止恶意刷接口）
-app.add_middleware(RateLimitMiddleware)
+# 【已废弃】旧版速率限制中间件
+# app.add_middleware(RateLimitMiddleware)
 
-# IP黑名单拦截中间件（优化版 - 减少日志和数据库查询）
-# 旧版本已注释，使用优化版 OptimizedIPBlockMiddleware
-"""
-class IPBlockMiddleware(BaseHTTPMiddleware):
-    # 原始版本已被优化版替代，保留以备参考
-    pass
-"""
+# 【已废弃】IP黑名单拦截中间件（优化版）
+# app.add_middleware(OptimizedIPBlockMiddleware, silent_mode=True)
 
-# 注册优化的IP拦截中间件（静默模式，减少95%日志记录）
-app.add_middleware(OptimizedIPBlockMiddleware, silent_mode=True)
+# 【新版】增强防护中间件 - 集成所有防护功能
+# 包括：速率限制、请求间隔检查、IP黑名单、自动封禁
+app.add_middleware(EnhancedProtectionMiddleware)
 
 # 全局异常处理器
 @app.exception_handler(RequestValidationError)
