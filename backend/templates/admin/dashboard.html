@@ -996,10 +996,13 @@
                     <div id="userList" class="list-container">
                         <div class="empty-state">
                             <div class="empty-icon">👥</div>
-                            <div class="empty-title">暂无用户数据</div>
-                            <div class="empty-subtitle">点击"搜索"按钮加载用户列表</div>
+                            <div class="empty-title">加载中...</div>
+                            <div class="empty-subtitle">正在加载用户列表</div>
                         </div>
                     </div>
+
+                    <!-- 用户分页 -->
+                    <div id="userPagination" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;"></div>
                 </div>
             </div>
         </div>
@@ -1046,8 +1049,8 @@
                     <div id="suspiciousIPList" class="list-container">
                         <div class="empty-state">
                             <div class="empty-icon">🛡️</div>
-                            <div class="empty-title">暂无可疑IP</div>
-                            <div class="empty-subtitle">点击"刷新"加载可疑IP列表</div>
+                            <div class="empty-title">加载中...</div>
+                            <div class="empty-subtitle">正在加载可疑IP列表</div>
                         </div>
                     </div>
                 </div>
@@ -1069,10 +1072,13 @@
                     <div id="ipBlacklist" class="list-container">
                         <div class="empty-state">
                             <div class="empty-icon">🚫</div>
-                            <div class="empty-title">暂无封禁IP</div>
-                            <div class="empty-subtitle">点击"刷新"加载黑名单</div>
+                            <div class="empty-title">加载中...</div>
+                            <div class="empty-subtitle">正在加载黑名单</div>
                         </div>
                     </div>
+
+                    <!-- IP黑名单分页 -->
+                    <div id="ipBlacklistPagination" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;"></div>
                 </div>
             </div>
         </div>
@@ -1192,8 +1198,8 @@
                     <div id="withdrawRequestList" class="list-container">
                         <div class="empty-state">
                             <div class="empty-icon">💸</div>
-                            <div class="empty-title">暂无提现申请</div>
-                            <div class="empty-subtitle">点击"刷新"按钮加载提现列表</div>
+                            <div class="empty-title">加载中...</div>
+                            <div class="empty-subtitle">正在加载提现列表</div>
                         </div>
                     </div>
                     
@@ -1576,35 +1582,6 @@
             }
         }
 
-        // 页面切换
-        function showPage(pageId) {
-            // 隐藏所有页面
-            document.querySelectorAll('.page-content').forEach(page => {
-                page.classList.remove('active');
-            });
-            
-            // 移除所有菜单活跃状态
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // 显示目标页面
-            document.getElementById(pageId + '-page').classList.add('active');
-            
-            // 设置菜单活跃状态
-            event.target.classList.add('active');
-            
-            // 根据页面类型加载相应数据
-            if (pageId === 'users') {
-                loadUsers(); // 自动加载用户列表
-            } else if (pageId === 'withdraws') {
-                loadWithdrawRequests(); // 自动加载提现申请
-            } else if (pageId === 'ip') {
-                loadSuspiciousIPs(); // 自动加载可疑IP
-                loadIPBlacklist(); // 自动加载黑名单
-            }
-        }
-
         // 加载统计数据
         async function loadStats() {
             try {
@@ -1761,11 +1738,19 @@
             }
         }
 
+        // 用户分页状态
+        let currentUserPage = 1;
+        let currentUserPageSize = 20;
+
         // 加载用户列表
-        async function loadUsers() {
+        async function loadUsers(page = 1) {
             try {
+                currentUserPage = page;
                 const search = document.getElementById('userSearch').value;
-                const url = search ? `api/users?search=${encodeURIComponent(search)}` : 'api/users';
+                let url = `api/users?page=${page}&size=${currentUserPageSize}`;
+                if (search) {
+                    url += `&search=${encodeURIComponent(search)}`;
+                }
 
                 const response = await fetch(url);
                 const result = await response.json();
@@ -1773,29 +1758,48 @@
                 const userList = document.getElementById('userList');
 
                 if (result.code === 200 && result.data && result.data.items && result.data.items.length > 0) {
-                    userList.innerHTML = result.data.items.map(user => `
-                        <div class="list-item" style="${user.ip_risk_level === 'high' ? 'border-left: 4px solid #ef4444;' : user.ip_risk_level === 'medium' ? 'border-left: 4px solid #f59e0b;' : ''}">
+                    userList.innerHTML = result.data.items.map(user => {
+                        const ipInfo = user.ip_info || {};
+                        const riskLevel = ipInfo.risk_level || 'normal';
+                        const isBlocked = ipInfo.blocked_ips > 0;
+                        const isSuspicious = ipInfo.suspicious_ips > 0;
+                        const isDisabled = user.status === 0;
+
+                        return `
+                        <div class="list-item" style="${isBlocked ? 'border-left: 4px solid #ef4444;' : isSuspicious ? 'border-left: 4px solid #f59e0b;' : ''}">
                             <div class="list-item-header">
                                 <div>
                                     <strong>${user.nickname || user.username || user.device_id}</strong>
+                                    <span class="status-badge ${isDisabled ? 'status-danger' : 'status-active'}">
+                                        ${isDisabled ? '❌ 已禁用' : '✓ 正常'}
+                                    </span>
                                     <span class="status-badge status-active">等级 ${user.level}</span>
-                                    ${user.ip_risk_level === 'high' ? '<span class="status-badge" style="background: #fee2e2; color: #dc2626;">🚨 高风险IP</span>' : ''}
-                                    ${user.ip_risk_level === 'medium' ? '<span class="status-badge" style="background: #fef3c7; color: #d97706;">⚠️ 可疑IP</span>' : ''}
+                                    ${isBlocked ? '<span class="status-badge" style="background: #fee2e2; color: #dc2626;">🚨 使用已封IP</span>' : ''}
+                                    ${isSuspicious && !isBlocked ? '<span class="status-badge" style="background: #fef3c7; color: #d97706;">⚠️ 可疑IP</span>' : ''}
                                 </div>
-                                <div style="display: flex; gap: 10px; align-items: center;">
+                                <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                                     <span class="status-badge status-warning">${user.coins} 金币</span>
-                                    ${user.ip_risk_level && user.ip_risk_level !== 'normal' ? `<button class="btn btn-warning" onclick="viewUserIPs(${user.id})" style="padding: 4px 8px; font-size: 12px;">查看IP</button>` : ''}
+                                    ${ipInfo.total_ips > 0 ? `<button class="btn btn-info" onclick="viewUserIPs(${user.id})" style="padding: 4px 8px; font-size: 12px;">查看IP(${ipInfo.total_ips})</button>` : ''}
+                                    ${ipInfo.recent_ip && !isBlocked ? `<button class="btn btn-danger" onclick="quickBlockIP('${ipInfo.recent_ip}', ${user.id})" style="padding: 4px 8px; font-size: 12px;">封禁IP</button>` : ''}
+                                    <button class="btn ${isDisabled ? 'btn-success' : 'btn-warning'}" onclick="toggleUserStatus(${user.id}, ${isDisabled ? 1 : 0})" style="padding: 4px 8px; font-size: 12px;">
+                                        ${isDisabled ? '启用' : '禁用'}
+                                    </button>
                                     <button class="btn btn-primary" onclick="editUser(${user.id}, '${user.nickname || ''}', ${user.coins}, ${user.level}, ${user.experience})" style="padding: 4px 8px; font-size: 12px;">编辑</button>
                                 </div>
                             </div>
                             <div>
                                 <strong>设备ID:</strong> ${user.device_id}<br>
                                 ${user.device_name ? `<strong>设备型号:</strong> ${user.device_name}<br>` : ''}
-                                <strong>注册时间:</strong> ${new Date(user.register_time).toLocaleString()}
+                                <strong>注册时间:</strong> ${new Date(user.register_time).toLocaleString()}<br>
+                                ${ipInfo.recent_ip ? `<strong>最近IP:</strong> ${ipInfo.recent_ip}` : ''}
                             </div>
                             ${user.last_login_time ? `<div class="list-item-meta">最后登录: ${new Date(user.last_login_time).toLocaleString()}</div>` : ''}
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
+
+                    // 渲染分页
+                    renderUserPagination(result.data.total, result.data.page, result.data.size);
                 } else {
                     userList.innerHTML = `
                         <div class="empty-state">
@@ -1804,6 +1808,7 @@
                             <div class="empty-subtitle">尝试调整搜索条件或创建测试用户</div>
                         </div>
                     `;
+                    document.getElementById('userPagination').innerHTML = '';
                 }
             } catch (error) {
                 document.getElementById('userList').innerHTML = `
@@ -1813,6 +1818,109 @@
                         <div class="empty-subtitle">${error.message}</div>
                     </div>
                 `;
+                document.getElementById('userPagination').innerHTML = '';
+            }
+        }
+
+        // 渲染用户分页
+        function renderUserPagination(total, currentPage, pageSize) {
+            const pagination = document.getElementById('userPagination');
+            const totalPages = Math.ceil(total / pageSize);
+
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // 上一页按钮
+            if (currentPage > 1) {
+                html += `<button class="pagination-btn" onclick="loadUsers(${currentPage - 1})">上一页</button>`;
+            }
+
+            // 页码按钮
+            const showPages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
+            let endPage = Math.min(totalPages, startPage + showPages - 1);
+
+            if (endPage - startPage < showPages - 1) {
+                startPage = Math.max(1, endPage - showPages + 1);
+            }
+
+            if (startPage > 1) {
+                html += `<button class="pagination-btn" onclick="loadUsers(1)">1</button>`;
+                if (startPage > 2) html += `<span style="padding: 0 10px;">...</span>`;
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="loadUsers(${i})">${i}</button>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<span style="padding: 0 10px;">...</span>`;
+                html += `<button class="pagination-btn" onclick="loadUsers(${totalPages})">${totalPages}</button>`;
+            }
+
+            // 下一页按钮
+            if (currentPage < totalPages) {
+                html += `<button class="pagination-btn" onclick="loadUsers(${currentPage + 1})">下一页</button>`;
+            }
+
+            pagination.innerHTML = html;
+        }
+
+        // 切换用户启用/禁用状态
+        async function toggleUserStatus(userId, newStatus) {
+            const action = newStatus === 1 ? '启用' : '禁用';
+            if (!confirm(`确定要${action}此用户吗？`)) return;
+
+            try {
+                const response = await fetch(`api/users/${userId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    alert(`✅ 用户已${action}`);
+                    loadUsers(currentUserPage); // 刷新当前页
+                } else {
+                    alert('操作失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        // 快速封禁IP
+        async function quickBlockIP(ipAddress, userId) {
+            const reason = prompt(`确定要封禁IP: ${ipAddress} 吗？\n请输入封禁原因：`, '异常活动');
+            if (!reason) return;
+
+            try {
+                const response = await fetch('api/ip/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ip_address: ipAddress,
+                        reason: reason,
+                        duration_hours: null  // 永久封禁
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    alert(`✅ IP已封禁: ${ipAddress}`);
+                    loadUsers(currentUserPage); // 刷新当前页
+                } else {
+                    alert('封禁失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('封禁失败: ' + error.message);
             }
         }
 
@@ -1869,10 +1977,15 @@
             }
         }
 
+        // IP黑名单分页状态
+        let currentIPBlacklistPage = 1;
+        let currentIPBlacklistPageSize = 10;
+
         // 加载IP黑名单
-        async function loadIPBlacklist() {
+        async function loadIPBlacklist(page = 1) {
             try {
-                const response = await fetch('api/ip/blacklist?is_active=1');
+                currentIPBlacklistPage = page;
+                const response = await fetch(`api/ip/blacklist?is_active=1&page=${page}&size=${currentIPBlacklistPageSize}`);
                 const result = await response.json();
 
                 const listEl = document.getElementById('ipBlacklist');
@@ -1900,6 +2013,9 @@
                             ${ip.related_user_ids ? `<div class="list-item-meta">关联用户ID: ${ip.related_user_ids}</div>` : ''}
                         </div>
                     `).join('');
+
+                    // 渲染分页
+                    renderIPBlacklistPagination(result.data.total, result.data.page, result.data.size);
                 } else {
                     listEl.innerHTML = `
                         <div class="empty-state">
@@ -1908,6 +2024,7 @@
                             <div class="empty-subtitle">当前没有被封禁的IP地址</div>
                         </div>
                     `;
+                    document.getElementById('ipBlacklistPagination').innerHTML = '';
                 }
             } catch (error) {
                 document.getElementById('ipBlacklist').innerHTML = `
@@ -1917,7 +2034,56 @@
                         <div class="empty-subtitle">${error.message}</div>
                     </div>
                 `;
+                document.getElementById('ipBlacklistPagination').innerHTML = '';
             }
+        }
+
+        // 渲染IP黑名单分页
+        function renderIPBlacklistPagination(total, currentPage, pageSize) {
+            const pagination = document.getElementById('ipBlacklistPagination');
+            const totalPages = Math.ceil(total / pageSize);
+
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // 上一页按钮
+            if (currentPage > 1) {
+                html += `<button class="pagination-btn" onclick="loadIPBlacklist(${currentPage - 1})">上一页</button>`;
+            }
+
+            // 页码按钮
+            const showPages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
+            let endPage = Math.min(totalPages, startPage + showPages - 1);
+
+            if (endPage - startPage < showPages - 1) {
+                startPage = Math.max(1, endPage - showPages + 1);
+            }
+
+            if (startPage > 1) {
+                html += `<button class="pagination-btn" onclick="loadIPBlacklist(1)">1</button>`;
+                if (startPage > 2) html += `<span style="padding: 0 10px;">...</span>`;
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="loadIPBlacklist(${i})">${i}</button>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<span style="padding: 0 10px;">...</span>`;
+                html += `<button class="pagination-btn" onclick="loadIPBlacklist(${totalPages})">${totalPages}</button>`;
+            }
+
+            // 下一页按钮
+            if (currentPage < totalPages) {
+                html += `<button class="pagination-btn" onclick="loadIPBlacklist(${currentPage + 1})">下一页</button>`;
+            }
+
+            pagination.innerHTML = html;
         }
 
         // 封禁IP
@@ -1962,8 +2128,8 @@
 
                 if (result.code === 200) {
                     alert('✅ IP已解封');
-                    loadIPBlacklist();
-                    loadSuspiciousIPs();
+                    loadIPBlacklist(currentIPBlacklistPage); // 刷新当前页
+                    loadSuspiciousIPs(); // 刷新可疑IP列表
                 } else {
                     alert('❌ 解封失败: ' + result.message);
                 }
@@ -2160,7 +2326,7 @@
                 if (result.code === 200) {
                     alert('✅ IP已封禁');
                     hideManualBlockDialog();
-                    loadIPBlacklist();
+                    loadIPBlacklist(1); // 重新加载第一页
                 } else {
                     alert('❌ 封禁失败: ' + result.message);
                 }
@@ -3133,35 +3299,30 @@
             // 隐藏所有页面
             const pages = document.querySelectorAll('.page-content');
             pages.forEach(page => page.style.display = 'none');
-            
+
             // 移除所有菜单项的active状态
             const menuItems = document.querySelectorAll('.menu-item');
             menuItems.forEach(item => item.classList.remove('active'));
-            
+
             // 显示目标页面
             const targetPage = document.getElementById(pageId + '-page');
             if (targetPage) {
                 targetPage.style.display = 'block';
-                
-                // 如果是提现管理页面，加载数据
-                if (pageId === 'withdraws') {
-                    loadWithdrawRequests();
-                }
-                
-                // 如果是等级管理页面，加载数据
-                if (pageId === 'levels') {
+
+                // 根据页面类型自动加载数据
+                if (pageId === 'users') {
+                    loadUsers(1); // 自动加载用户列表第一页
+                } else if (pageId === 'ads') {
+                    loadAds(); // 自动加载广告列表
+                } else if (pageId === 'withdraws') {
+                    loadWithdrawRequests(); // 自动加载提现申请
+                } else if (pageId === 'levels') {
                     loadLevelStats();
                     loadLevelsList();
-                }
-                
-                // 如果是版本管理页面，加载数据
-                if (pageId === 'versions') {
+                } else if (pageId === 'versions') {
                     loadVersionStats();
                     loadVersionsList();
-                }
-
-                // 如果是IP管理页面，加载数据
-                if (pageId === 'ip') {
+                } else if (pageId === 'ip') {
                     loadSuspiciousIPs();
                     loadIPBlacklist();
                 }

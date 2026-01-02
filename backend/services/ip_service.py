@@ -3,6 +3,7 @@ from sqlalchemy import func, and_, or_
 from models import IPBlacklist, IPAccessLog, AdWatchRecord, User
 from datetime import datetime, date, timedelta
 from typing import List, Optional, Dict
+import json
 
 
 class IPService:
@@ -16,9 +17,48 @@ class IPService:
         "auto_block_duration_hours": 24, # 自动封禁时长（小时）
     }
 
+    # Redis缓存TTL配置（秒）
+    CACHE_TTL = {
+        "ip_blocked": 300,      # IP封禁状态缓存5分钟
+        "ip_block_info": 300,   # IP封禁详情缓存5分钟
+    }
+
+    @staticmethod
+    def _get_redis():
+        """获取Redis客户端"""
+        try:
+            from database import redis_client
+            return redis_client
+        except Exception:
+            return None
+
+    @staticmethod
+    def _clear_ip_cache(ip_address: str):
+        """清除IP相关的Redis缓存"""
+        redis = IPService._get_redis()
+        if redis:
+            try:
+                redis.delete(f"ip_blocked:{ip_address}")
+                redis.delete(f"ip_block_info:{ip_address}")
+            except Exception:
+                pass
+
     @staticmethod
     def is_ip_blocked(db: Session, ip_address: str) -> bool:
-        """检查IP是否被封禁"""
+        """检查IP是否被封禁（带Redis缓存）"""
+        redis = IPService._get_redis()
+        cache_key = f"ip_blocked:{ip_address}"
+
+        # 尝试从Redis获取缓存
+        if redis:
+            try:
+                cached = redis.get(cache_key)
+                if cached is not None:
+                    return cached == "1"
+            except Exception:
+                pass
+
+        # 缓存未命中，查询数据库
         now = datetime.now()
         blocked = db.query(IPBlacklist).filter(
             IPBlacklist.ip_address == ip_address,
@@ -28,11 +68,38 @@ class IPService:
                 IPBlacklist.expire_time > now
             )
         ).first()
-        return blocked is not None
+
+        is_blocked = blocked is not None
+
+        # 写入Redis缓存
+        if redis:
+            try:
+                redis.setex(
+                    cache_key,
+                    IPService.CACHE_TTL["ip_blocked"],
+                    "1" if is_blocked else "0"
+                )
+            except Exception:
+                pass
+
+        return is_blocked
 
     @staticmethod
     def get_ip_block_info(db: Session, ip_address: str) -> Optional[Dict]:
-        """获取IP封禁信息"""
+        """获取IP封禁信息（带Redis缓存）"""
+        redis = IPService._get_redis()
+        cache_key = f"ip_block_info:{ip_address}"
+
+        # 尝试从Redis获取缓存
+        if redis:
+            try:
+                cached = redis.get(cache_key)
+                if cached:
+                    return json.loads(cached)
+            except Exception:
+                pass
+
+        # 缓存未命中，查询数据库
         now = datetime.now()
         blocked = db.query(IPBlacklist).filter(
             IPBlacklist.ip_address == ip_address,
@@ -43,8 +110,9 @@ class IPService:
             )
         ).first()
 
+        result = None
         if blocked:
-            return {
+            result = {
                 "id": blocked.id,
                 "ip_address": blocked.ip_address,
                 "reason": blocked.reason,
@@ -52,7 +120,20 @@ class IPService:
                 "blocked_time": blocked.blocked_time.isoformat() if blocked.blocked_time else None,
                 "expire_time": blocked.expire_time.isoformat() if blocked.expire_time else None,
             }
-        return None
+
+        # 写入Redis缓存
+        if redis:
+            try:
+                if result:
+                    redis.setex(
+                        cache_key,
+                        IPService.CACHE_TTL["ip_block_info"],
+                        json.dumps(result)
+                    )
+            except Exception:
+                pass
+
+        return result
 
     @staticmethod
     def block_ip(db: Session, ip_address: str, reason: str,
@@ -79,6 +160,8 @@ class IPService:
             if user_ids_str:
                 existing.related_user_ids = user_ids_str
             db.commit()
+            # 清除Redis缓存
+            IPService._clear_ip_cache(ip_address)
             return {"success": True, "message": "IP封禁已更新", "id": existing.id}
         else:
             new_block = IPBlacklist(
@@ -91,6 +174,8 @@ class IPService:
             )
             db.add(new_block)
             db.commit()
+            # 清除Redis缓存
+            IPService._clear_ip_cache(ip_address)
             return {"success": True, "message": "IP已封禁", "id": new_block.id}
 
     @staticmethod
@@ -106,6 +191,8 @@ class IPService:
         blocked.is_active = 0
         blocked.updated_time = datetime.now()
         db.commit()
+        # 清除Redis缓存
+        IPService._clear_ip_cache(ip_address)
         return {"success": True, "message": "IP已解封"}
 
     @staticmethod

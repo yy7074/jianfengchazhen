@@ -7,8 +7,77 @@ from services.config_service import ConfigService
 from typing import List, Optional
 from datetime import datetime, date
 import random
+import json
 
 class AdService:
+
+    # Redis缓存TTL配置（秒）
+    CACHE_TTL = {
+        "active_ads": 300,  # 活跃广告列表缓存5分钟
+    }
+
+    @staticmethod
+    def _get_redis():
+        """获取Redis客户端"""
+        try:
+            from database import redis_client
+            return redis_client
+        except Exception:
+            return None
+
+    @staticmethod
+    def _clear_ads_cache():
+        """清除广告相关缓存"""
+        redis = AdService._get_redis()
+        if redis:
+            try:
+                redis.delete("active_ads")
+            except Exception:
+                pass
+
+    @staticmethod
+    def _get_active_ads_cached(db: Session) -> List[AdConfig]:
+        """获取活跃广告列表（带缓存）"""
+        redis = AdService._get_redis()
+        cache_key = "active_ads"
+
+        # 尝试从Redis获取缓存
+        if redis:
+            try:
+                cached = redis.get(cache_key)
+                if cached:
+                    # 从缓存反序列化广告ID列表
+                    ad_ids = json.loads(cached)
+                    if ad_ids:
+                        # 根据ID查询广告对象
+                        ads = db.query(AdConfig).filter(AdConfig.id.in_(ad_ids)).all()
+                        # 按原始顺序排序
+                        ads_dict = {ad.id: ad for ad in ads}
+                        return [ads_dict[aid] for aid in ad_ids if aid in ads_dict]
+            except Exception:
+                pass
+
+        # 缓存未命中，查询数据库
+        now = datetime.now()
+        available_ads = db.query(AdConfig).filter(
+            AdConfig.status == AdStatus.ACTIVE,
+            or_(AdConfig.start_time.is_(None), AdConfig.start_time <= now),
+            or_(AdConfig.end_time.is_(None), AdConfig.end_time >= now)
+        ).all()
+
+        # 写入Redis缓存（只缓存ID列表，减少内存占用）
+        if redis and available_ads:
+            try:
+                ad_ids = [ad.id for ad in available_ads]
+                redis.setex(
+                    cache_key,
+                    AdService.CACHE_TTL["active_ads"],
+                    json.dumps(ad_ids)
+                )
+            except Exception:
+                pass
+
+        return available_ads
     
     @staticmethod
     def get_random_ad(db: Session, user_id) -> Optional[AdConfig]:
@@ -19,35 +88,30 @@ class AdService:
             AdWatchRecord.user_id == user_id,
             func.date(AdWatchRecord.watch_time) == today
         ).all()
-        
-        # 获取系统每日广告总限制
+
+        # 获取系统每日广告总限制（使用缓存）
         daily_limit = int(ConfigService.get_config(db, "daily_ad_limit", "20"))
         if len(today_watches) >= daily_limit:
             return None
-        
+
         # 统计每个广告今日观看次数
         ad_watch_count = {}
         for watch in today_watches:
             ad_watch_count[watch.ad_id] = ad_watch_count.get(watch.ad_id, 0) + 1
-        
-        # 获取当前有效的广告
-        now = datetime.now()
-        available_ads = db.query(AdConfig).filter(
-            AdConfig.status == AdStatus.ACTIVE,
-            or_(AdConfig.start_time.is_(None), AdConfig.start_time <= now),
-            or_(AdConfig.end_time.is_(None), AdConfig.end_time >= now)
-        ).all()
-        
+
+        # 获取当前有效的广告（使用缓存）
+        available_ads = AdService._get_active_ads_cached(db)
+
         # 过滤掉已达到每日限制的广告
         eligible_ads = []
         for ad in available_ads:
             watched_today = ad_watch_count.get(ad.id, 0)
             if watched_today < ad.daily_limit:
                 eligible_ads.append(ad)
-        
+
         if not eligible_ads:
             return None
-        
+
         # 根据权重随机选择
         weights = [ad.weight for ad in eligible_ads]
         return random.choices(eligible_ads, weights=weights, k=1)[0]
@@ -194,6 +258,8 @@ class AdService:
         db.add(ad)
         db.commit()
         db.refresh(ad)
+        # 清除广告缓存
+        AdService._clear_ads_cache()
         return ad
     
     @staticmethod
@@ -202,7 +268,7 @@ class AdService:
         ad = db.query(AdConfig).filter(AdConfig.id == ad_id).first()
         if not ad:
             return None
-        
+
         # 更新字段，特殊处理status字段
         for field, value in ad_data.dict(exclude_unset=True).items():
             if field == 'status':
@@ -214,30 +280,34 @@ class AdService:
                 # 如果是其他值就忽略
             else:
                 setattr(ad, field, value)
-        
+
         db.commit()
         db.refresh(ad)
+        # 清除广告缓存
+        AdService._clear_ads_cache()
         return ad
     
     @staticmethod
     def delete_ad_config(db: Session, ad_id: int) -> bool:
         """删除广告配置"""
         from models import AdWatchRecord
-        
+
         ad = db.query(AdConfig).filter(AdConfig.id == ad_id).first()
         if not ad:
             return False
-        
+
         # 检查是否有相关的观看记录
         watch_records_count = db.query(AdWatchRecord).filter(AdWatchRecord.ad_id == ad_id).count()
-        
+
         if watch_records_count > 0:
             # 如果有观看记录，先删除相关记录
             db.query(AdWatchRecord).filter(AdWatchRecord.ad_id == ad_id).delete()
-        
+
         # 删除广告配置
         db.delete(ad)
         db.commit()
+        # 清除广告缓存
+        AdService._clear_ads_cache()
         return True
     
     @staticmethod

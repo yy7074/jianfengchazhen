@@ -8,6 +8,7 @@ from services.user_service import UserService
 from services.ad_service import AdService
 from services.config_service import ConfigService
 from services.withdraw_service import WithdrawService
+from services.ip_service import IPService
 from typing import List
 import logging
 
@@ -15,10 +16,56 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+def get_client_ip(request: Request) -> str:
+    """获取客户端真实IP"""
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+    return request.client.host if request.client else "unknown"
+
+def check_registration_limit(db: Session, ip_address: str) -> bool:
+    """检查IP注册限制（1小时内最多5个）"""
+    from sqlalchemy import text
+    from datetime import datetime, timedelta
+
+    one_hour_ago = datetime.now() - timedelta(hours=1)
+    count = db.execute(text("""
+        SELECT COUNT(DISTINCT device_id)
+        FROM users
+        WHERE last_login_time >= :time_limit
+        AND id IN (
+            SELECT DISTINCT user_id
+            FROM ad_watch_records
+            WHERE ip_address = :ip
+        )
+    """), {'time_limit': one_hour_ago, 'ip': ip_address}).scalar()
+
+    return count < 5  # 允许1小时内最多5个注册
+
 @router.post("/register", response_model=BaseResponse)
-async def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
+async def register_user(user_data: UserRegister, request: Request, db: Session = Depends(get_db)):
     """用户注册（如果用户已存在则直接返回用户信息）"""
     try:
+        # 获取客户端IP
+        client_ip = get_client_ip(request)
+
+        # 1. 检查IP是否被封禁
+        if IPService.is_ip_blocked(db, client_ip):
+            raise HTTPException(
+                status_code=403,
+                detail="您的IP已被封禁，如有疑问请联系管理员"
+            )
+
+        # 2. 检查注册频率限制
+        if not check_registration_limit(db, client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail="注册过于频繁，请稍后再试"
+            )
+
         # 检查用户是否已存在
         existing_user = UserService.get_user_by_device_id(db, user_data.device_id)
         if existing_user:

@@ -9,92 +9,57 @@ class LevelService:
     
     @staticmethod
     def init_default_levels(db: Session):
-        """初始化默认等级配置"""
+        """初始化默认等级配置（30级系统，广告倍数最高40倍）"""
         # 检查是否已有等级配置
         existing_levels = db.query(UserLevelConfig).count()
         if existing_levels > 0:
             return
-        
-        # 默认等级配置
+
+        # 默认等级配置（30级系统）
         default_levels = [
-            {
-                "level": 1,
-                "level_name": "新手",
-                "ad_coin_multiplier": Decimal("1.00"),
-                "game_coin_multiplier": Decimal("1.00"),
-                "min_experience": 0,
-                "max_experience": 999,
-                "description": "初始等级，正常金币奖励",
-                "is_active": 1
-            },
-            {
-                "level": 2,
-                "level_name": "青铜",
-                "ad_coin_multiplier": Decimal("1.20"),
-                "game_coin_multiplier": Decimal("1.10"),
-                "min_experience": 1000,
-                "max_experience": 2999,
-                "description": "广告金币+20%，游戏金币+10%",
-                "is_active": 1
-            },
-            {
-                "level": 3,
-                "level_name": "白银",
-                "ad_coin_multiplier": Decimal("1.50"),
-                "game_coin_multiplier": Decimal("1.20"),
-                "min_experience": 3000,
-                "max_experience": 5999,
-                "description": "广告金币+50%，游戏金币+20%",
-                "is_active": 1
-            },
-            {
-                "level": 4,
-                "level_name": "黄金",
-                "ad_coin_multiplier": Decimal("1.80"),
-                "game_coin_multiplier": Decimal("1.30"),
-                "min_experience": 6000,
-                "max_experience": 9999,
-                "description": "广告金币+80%，游戏金币+30%",
-                "is_active": 1
-            },
-            {
-                "level": 5,
-                "level_name": "铂金",
-                "ad_coin_multiplier": Decimal("2.00"),
-                "game_coin_multiplier": Decimal("1.50"),
-                "min_experience": 10000,
-                "max_experience": 19999,
-                "description": "广告金币+100%，游戏金币+50%",
-                "is_active": 1
-            },
-            {
-                "level": 6,
-                "level_name": "钻石",
-                "ad_coin_multiplier": Decimal("2.50"),
-                "game_coin_multiplier": Decimal("1.80"),
-                "min_experience": 20000,
-                "max_experience": 39999,
-                "description": "广告金币+150%，游戏金币+80%",
-                "is_active": 1
-            },
-            {
-                "level": 7,
-                "level_name": "大师",
-                "ad_coin_multiplier": Decimal("3.00"),
-                "game_coin_multiplier": Decimal("2.00"),
-                "min_experience": 40000,
-                "max_experience": None,
-                "description": "广告金币+200%，游戏金币+100%",
-                "is_active": 1
-            }
+            # 1-10级：新手到黄金 (广告倍数 1.0 - 5.0)
+            {"level": 1, "level_name": "新手I", "ad_coin_multiplier": Decimal("1.00"), "game_coin_multiplier": Decimal("1.00"), "min_experience": 0, "max_experience": 999, "description": "初始等级，正常金币奖励"},
+            {"level": 2, "level_name": "新手II", "ad_coin_multiplier": Decimal("1.50"), "game_coin_multiplier": Decimal("1.20"), "min_experience": 1000, "max_experience": 2999, "description": "广告金币1.5倍，游戏金币1.2倍"},
+            {"level": 3, "level_name": "新手III", "ad_coin_multiplier": Decimal("2.00"), "game_coin_multiplier": Decimal("1.40"), "min_experience": 3000, "max_experience": 5999, "description": "广告金币2倍，游戏金币1.4倍"},
+            {"level": 4, "level_name": "青铜I", "ad_coin_multiplier": Decimal("2.50"), "game_coin_multiplier": Decimal("1.60"), "min_experience": 6000, "max_experience": 9999, "description": "广告金币2.5倍，游戏金币1.6倍"},
+            {"level": 5, "level_name": "青铜II", "ad_coin_multiplier": Decimal("3.00"), "game_coin_multiplier": Decimal("1.80"), "min_experience": 10000, "max_experience": 14999, "description": "广告金币3倍，游戏金币1.8倍"},
+            {"level": 6, "level_name": "青铜III", "ad_coin_multiplier": Decimal("3.50"), "game_coin_multiplier": Decimal("2.00"), "min_experience": 15000, "max_experience": 21999, "description": "广告金币3.5倍，游戏金币2倍"},
+            {"level": 7, "level_name": "白银I", "ad_coin_multiplier": Decimal("4.00"), "game_coin_multiplier": Decimal("2.20"), "min_experience": 22000, "max_experience": 29999, "description": "广告金币4倍，游戏金币2.2倍"},
+            {"level": 8, "level_name": "白银II", "ad_coin_multiplier": Decimal("4.50"), "game_coin_multiplier": Decimal("2.40"), "min_experience": 30000, "max_experience": 39999, "description": "广告金币4.5倍，游戏金币2.4倍"},
+            {"level": 9, "level_name": "白银III", "ad_coin_multiplier": Decimal("5.00"), "game_coin_multiplier": Decimal("2.60"), "min_experience": 40000, "max_experience": 52999, "description": "广告金币5倍，游戏金币2.6倍"},
+            {"level": 10, "level_name": "黄金I", "ad_coin_multiplier": Decimal("6.00"), "game_coin_multiplier": Decimal("3.00"), "min_experience": 53000, "max_experience": 69999, "description": "广告金币6倍，游戏金币3倍"},
+
+            # 11-20级：铂金到大师 (广告倍数 7.0 - 15.0)
+            {"level": 11, "level_name": "黄金II", "ad_coin_multiplier": Decimal("7.00"), "game_coin_multiplier": Decimal("3.50"), "min_experience": 70000, "max_experience": 89999, "description": "广告金币7倍，游戏金币3.5倍"},
+            {"level": 12, "level_name": "黄金III", "ad_coin_multiplier": Decimal("8.00"), "game_coin_multiplier": Decimal("4.00"), "min_experience": 90000, "max_experience": 114999, "description": "广告金币8倍，游戏金币4倍"},
+            {"level": 13, "level_name": "铂金I", "ad_coin_multiplier": Decimal("9.00"), "game_coin_multiplier": Decimal("4.50"), "min_experience": 115000, "max_experience": 144999, "description": "广告金币9倍，游戏金币4.5倍"},
+            {"level": 14, "level_name": "铂金II", "ad_coin_multiplier": Decimal("10.00"), "game_coin_multiplier": Decimal("5.00"), "min_experience": 145000, "max_experience": 179999, "description": "广告金币10倍，游戏金币5倍"},
+            {"level": 15, "level_name": "铂金III", "ad_coin_multiplier": Decimal("11.00"), "game_coin_multiplier": Decimal("5.50"), "min_experience": 180000, "max_experience": 219999, "description": "广告金币11倍，游戏金币5.5倍"},
+            {"level": 16, "level_name": "钻石I", "ad_coin_multiplier": Decimal("12.00"), "game_coin_multiplier": Decimal("6.00"), "min_experience": 220000, "max_experience": 269999, "description": "广告金币12倍，游戏金币6倍"},
+            {"level": 17, "level_name": "钻石II", "ad_coin_multiplier": Decimal("13.00"), "game_coin_multiplier": Decimal("6.50"), "min_experience": 270000, "max_experience": 329999, "description": "广告金币13倍，游戏金币6.5倍"},
+            {"level": 18, "level_name": "钻石III", "ad_coin_multiplier": Decimal("14.00"), "game_coin_multiplier": Decimal("7.00"), "min_experience": 330000, "max_experience": 399999, "description": "广告金币14倍，游戏金币7倍"},
+            {"level": 19, "level_name": "大师I", "ad_coin_multiplier": Decimal("15.00"), "game_coin_multiplier": Decimal("7.50"), "min_experience": 400000, "max_experience": 479999, "description": "广告金币15倍，游戏金币7.5倍"},
+            {"level": 20, "level_name": "大师II", "ad_coin_multiplier": Decimal("18.00"), "game_coin_multiplier": Decimal("9.00"), "min_experience": 480000, "max_experience": 579999, "description": "广告金币18倍，游戏金币9倍"},
+
+            # 21-30级：宗师到终极 (广告倍数 20.0 - 40.0)
+            {"level": 21, "level_name": "大师III", "ad_coin_multiplier": Decimal("20.00"), "game_coin_multiplier": Decimal("10.00"), "min_experience": 580000, "max_experience": 699999, "description": "广告金币20倍，游戏金币10倍"},
+            {"level": 22, "level_name": "宗师I", "ad_coin_multiplier": Decimal("22.00"), "game_coin_multiplier": Decimal("11.00"), "min_experience": 700000, "max_experience": 839999, "description": "广告金币22倍，游戏金币11倍"},
+            {"level": 23, "level_name": "宗师II", "ad_coin_multiplier": Decimal("24.00"), "game_coin_multiplier": Decimal("12.00"), "min_experience": 840000, "max_experience": 999999, "description": "广告金币24倍，游戏金币12倍"},
+            {"level": 24, "level_name": "宗师III", "ad_coin_multiplier": Decimal("26.00"), "game_coin_multiplier": Decimal("13.00"), "min_experience": 1000000, "max_experience": 1199999, "description": "广告金币26倍，游戏金币13倍"},
+            {"level": 25, "level_name": "王者I", "ad_coin_multiplier": Decimal("28.00"), "game_coin_multiplier": Decimal("14.00"), "min_experience": 1200000, "max_experience": 1439999, "description": "广告金币28倍，游戏金币14倍"},
+            {"level": 26, "level_name": "王者II", "ad_coin_multiplier": Decimal("30.00"), "game_coin_multiplier": Decimal("15.00"), "min_experience": 1440000, "max_experience": 1719999, "description": "广告金币30倍，游戏金币15倍"},
+            {"level": 27, "level_name": "王者III", "ad_coin_multiplier": Decimal("33.00"), "game_coin_multiplier": Decimal("16.00"), "min_experience": 1720000, "max_experience": 2039999, "description": "广告金币33倍，游戏金币16倍"},
+            {"level": 28, "level_name": "至尊I", "ad_coin_multiplier": Decimal("35.00"), "game_coin_multiplier": Decimal("17.00"), "min_experience": 2040000, "max_experience": 2419999, "description": "广告金币35倍，游戏金币17倍"},
+            {"level": 29, "level_name": "至尊II", "ad_coin_multiplier": Decimal("37.00"), "game_coin_multiplier": Decimal("18.00"), "min_experience": 2420000, "max_experience": 2859999, "description": "广告金币37倍，游戏金币18倍"},
+            {"level": 30, "level_name": "终极王者", "ad_coin_multiplier": Decimal("40.00"), "game_coin_multiplier": Decimal("20.00"), "min_experience": 2860000, "max_experience": None, "description": "广告金币40倍，游戏金币20倍，至高荣耀！"},
         ]
-        
+
         for level_data in default_levels:
-            level_config = UserLevelConfig(**level_data)
+            level_config = UserLevelConfig(**level_data, is_active=1)
             db.add(level_config)
-        
+
         db.commit()
-        print("✅ 默认用户等级配置初始化完成")
+        print("✅ 默认用户等级配置初始化完成（30级系统，广告最高40倍）")
     
     @staticmethod
     def get_user_level_config(db: Session, user_level: int) -> Optional[UserLevelConfig]:

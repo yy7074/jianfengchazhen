@@ -4,20 +4,71 @@ from schemas import SystemConfigUpdate
 from typing import Optional, Dict, List
 
 class ConfigService:
-    
+
+    # Redis缓存TTL配置（秒）
+    CACHE_TTL = 1800  # 系统配置缓存30分钟
+
+    @staticmethod
+    def _get_redis():
+        """获取Redis客户端"""
+        try:
+            from database import redis_client
+            return redis_client
+        except Exception:
+            return None
+
+    @staticmethod
+    def _clear_config_cache(key: str = None):
+        """清除配置缓存"""
+        redis = ConfigService._get_redis()
+        if redis:
+            try:
+                if key:
+                    # 清除单个配置缓存
+                    redis.delete(f"config:{key}")
+                else:
+                    # 清除所有配置缓存
+                    keys = redis.keys("config:*")
+                    if keys:
+                        redis.delete(*keys)
+            except Exception:
+                pass
+
     @staticmethod
     def get_config(db: Session, key: str, default_value: str = None) -> str:
-        """获取配置值"""
+        """获取配置值（带Redis缓存）"""
+        redis = ConfigService._get_redis()
+        cache_key = f"config:{key}"
+
+        # 尝试从Redis获取缓存
+        if redis:
+            try:
+                cached = redis.get(cache_key)
+                if cached is not None:
+                    return cached if cached != "__NULL__" else default_value
+            except Exception:
+                pass
+
+        # 缓存未命中，查询数据库
         config = db.query(SystemConfig).filter(SystemConfig.config_key == key).first()
-        if config:
-            return config.config_value
-        return default_value
+        result = config.config_value if config else default_value
+
+        # 写入Redis缓存
+        if redis:
+            try:
+                # 使用特殊值标记NULL，避免缓存穿透
+                cache_value = result if result is not None else "__NULL__"
+                redis.setex(cache_key, ConfigService.CACHE_TTL, cache_value)
+            except Exception:
+                pass
+
+        return result
     
     @staticmethod
     def set_config(db: Session, key: str, value: str, description: str = None) -> SystemConfig:
         """设置配置值"""
         config = db.query(SystemConfig).filter(SystemConfig.config_key == key).first()
-        
+
         if config:
             # 更新现有配置
             config.config_value = value
@@ -31,9 +82,11 @@ class ConfigService:
                 description=description
             )
             db.add(config)
-        
+
         db.commit()
         db.refresh(config)
+        # 清除Redis缓存
+        ConfigService._clear_config_cache(key)
         return config
     
     @staticmethod
@@ -70,6 +123,8 @@ class ConfigService:
         if config:
             db.delete(config)
             db.commit()
+            # 清除Redis缓存
+            ConfigService._clear_config_cache(key)
             return True
         return False
     
