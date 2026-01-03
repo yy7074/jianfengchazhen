@@ -27,7 +27,7 @@ object ConfigManager {
     // 默认配置值（与后端保持一致）
     private const val DEFAULT_MIN_WITHDRAW_AMOUNT = 10.0
     private const val DEFAULT_MAX_WITHDRAW_AMOUNT = 500.0
-    private const val DEFAULT_COIN_TO_RMB_RATE = 33000
+    private const val DEFAULT_COIN_TO_RMB_RATE = 3300
     private const val DEFAULT_WITHDRAWAL_FEE_RATE = 0.0
     private const val DEFAULT_DAILY_WITHDRAW_LIMIT = 1
     

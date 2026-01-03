@@ -36,8 +36,8 @@ class WithdrawViewModel : ViewModel() {
         val withdrawHistory: List<WithdrawRecord> = emptyList(),
         val message: String? = null,
         val error: String? = null,
-        val coinToRmbRate: Double = 33000.0, // 默认33000金币=1元，从后台动态获取
-        val exchangeRateText: String = "33000金币 ≈ ¥1.00"
+        val coinToRmbRate: Double = 3300.0, // 默认3300金币=1元，从后台动态获取
+        val exchangeRateText: String = "3300金币 ≈ ¥1.00"
     ) {
         val canSubmit: Boolean
             get() = selectedAmount != null &&
@@ -106,8 +106,13 @@ class WithdrawViewModel : ViewModel() {
             } catch (e: Exception) {
                 Log.e("WithdrawViewModel", "加载用户信息失败: ${e.message}", e)
                 val currentState = _uiState.value
-                // 显示详细的错误信息
-                val errorMessage = e.message ?: "加载失败，请重试"
+                // 显示用户友好的错误信息
+                val errorMessage = when {
+                    e.message?.contains("用户未登录") == true -> "网络连接失败，请检查网络后重试"
+                    e.message?.contains("用户ID") == true -> "登录状态异常，请重新启动应用"
+                    e.message?.contains("请求过于频繁") == true -> e.message
+                    else -> "刷新失败，请稍后重试"
+                }
                 val newState = currentState.copy(
                     isLoading = false,
                     error = errorMessage
@@ -332,17 +337,23 @@ class WithdrawViewModel : ViewModel() {
                     _uiState.value.realName
                 )
                 Log.d("WithdrawViewModel", "提现信息已保存，下次将自动填充")
-                
+
+                // 先显示成功消息
                 _uiState.value = _uiState.value.copy(
                     isSubmitting = false,
                     message = "提现申请提交成功，请等待审核",
                     selectedAmount = null
                     // 不再清空支付宝账号和真实姓名，方便下次使用
                 )
-                
-                // 重新加载用户信息和提现历史
-                loadUserInfo(context)
-                loadWithdrawHistory()
+
+                // 静默刷新用户信息和提现历史，不显示刷新错误
+                try {
+                    loadUserInfo(context)
+                    loadWithdrawHistory()
+                } catch (e: Exception) {
+                    Log.e("WithdrawViewModel", "提现成功后刷新信息失败，但不影响提现结果", e)
+                    // 不设置error，避免用户误以为提现失败
+                }
                 
             } catch (e: Exception) {
                 Log.e("WithdrawViewModel", "提交提现申请失败", e)

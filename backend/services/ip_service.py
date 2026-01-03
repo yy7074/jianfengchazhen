@@ -9,11 +9,11 @@ import json
 class IPService:
     """IP管理服务"""
 
-    # 异常检测阈值配置
+    # 异常检测阈值配置 - 调整为更合理的值
     THRESHOLDS = {
-        "max_users_per_ip": 5,           # 单IP最大关联用户数
-        "max_requests_per_minute": 60,   # 每分钟最大请求数
-        "max_ad_watches_per_hour": 100,  # 每小时最大广告观看数
+        "max_users_per_ip": 20,          # 单IP最大关联用户数（考虑公共WiFi/公司网络）
+        "max_requests_per_minute": 100,  # 每分钟最大请求数
+        "max_ad_watches_per_hour": 200,  # 每小时最大广告观看数
         "auto_block_duration_hours": 24, # 自动封禁时长（小时）
     }
 

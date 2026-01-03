@@ -37,7 +37,7 @@ fun WithdrawScreen(
     // 应用配置状态（与后端保持一致）
     var minWithdrawAmount by remember { mutableStateOf(10.0) }
     var maxWithdrawAmount by remember { mutableStateOf(500.0) }
-    var coinToRmbRate by remember { mutableStateOf(33000) }
+    var coinToRmbRate by remember { mutableStateOf(3300) }
     var dailyWithdrawLimit by remember { mutableStateOf(1) }
     
     LaunchedEffect(Unit) {
@@ -191,7 +191,7 @@ fun WithdrawScreen(
 fun BalanceCard(
     currentCoins: Int,
     withdrawableAmount: Double,
-    exchangeRateText: String = "33000金币 ≈ ¥1.00"
+    exchangeRateText: String = "3300金币 ≈ ¥1.00"
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),

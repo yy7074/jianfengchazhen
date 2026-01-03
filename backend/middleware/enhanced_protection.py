@@ -24,26 +24,26 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, **options):
         super().__init__(app)
 
-        # 严格速率限制配置
+        # 宽松速率限制配置（适合正常用户使用）
         self.limits = {
-            'register': {'requests': 2, 'window': 3600},      # 注册: 1小时2次（极严格）
-            'login': {'requests': 30, 'window': 60},          # 登录: 1分钟30次（放宽限制）
-            'ad_watch': {'requests': 30, 'window': 3600},     # 看广告: 1小时30次
-            'ad_random': {'requests': 50, 'window': 3600},    # 获取广告: 1小时50次
-            'default': {'requests': 20, 'window': 60}         # 默认: 1分钟20次
+            'register': {'requests': 5, 'window': 3600},      # 注册: 1小时5次（防止批量注册）
+            'login': {'requests': 100, 'window': 60},         # 登录: 1分钟100次（宽松）
+            'ad_watch': {'requests': 100, 'window': 3600},    # 看广告: 1小时100次（正常用户足够）
+            'ad_random': {'requests': 200, 'window': 3600},   # 获取广告: 1小时200次（宽松）
+            'default': {'requests': 100, 'window': 60}        # 默认: 1分钟100次（宽松）
         }
 
-        # 请求间隔配置（秒）
+        # 请求间隔配置（秒）- 大幅放宽
         self.min_intervals = {
-            'register': 300,      # 注册间隔：5分钟
-            'ad_watch': 3,        # 看广告间隔：3秒
-            'ad_random': 2,       # 获取广告间隔：2秒
-            'default': 0.3        # 默认间隔：0.3秒（放宽限制，适应APP并发请求）
+            'register': 60,       # 注册间隔：1分钟（之前5分钟太严格）
+            'ad_watch': 1,        # 看广告间隔：1秒（之前3秒）
+            'ad_random': 0.5,     # 获取广告间隔：0.5秒（之前2秒）
+            'default': 0.1        # 默认间隔：0.1秒（适应APP并发请求）
         }
 
-        # 自动封禁配置
+        # 自动封禁配置 - 提高阈值，避免误封
         self.auto_ban = {
-            'violation_threshold': 5,      # 违规5次自动封禁
+            'violation_threshold': 20,     # 违规20次自动封禁（之前5次太严格）
             'violation_window': 600,       # 10分钟内的违规
             'ban_duration': 86400          # 封禁24小时
         }
