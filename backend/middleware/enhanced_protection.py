@@ -30,6 +30,8 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
             'login': {'requests': 100, 'window': 60},         # 登录: 1分钟100次（宽松）
             'ad_watch': {'requests': 100, 'window': 3600},    # 看广告: 1小时100次（正常用户足够）
             'ad_random': {'requests': 200, 'window': 3600},   # 获取广告: 1小时200次（宽松）
+            'withdraw': {'requests': 50, 'window': 3600},     # 提现: 1小时50次（足够用）
+            'user_info': {'requests': 200, 'window': 60},     # 用户信息: 1分钟200次（宽松）
             'default': {'requests': 100, 'window': 60}        # 默认: 1分钟100次（宽松）
         }
 
@@ -38,6 +40,8 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
             'register': 60,       # 注册间隔：1分钟（之前5分钟太严格）
             'ad_watch': 1,        # 看广告间隔：1秒（之前3秒）
             'ad_random': 0.5,     # 获取广告间隔：0.5秒（之前2秒）
+            'withdraw': 0.5,      # 提现间隔：0.5秒
+            'user_info': 0.3,     # 用户信息查询：0.3秒
             'default': 0.1        # 默认间隔：0.1秒（适应APP并发请求）
         }
 
@@ -78,34 +82,12 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
                 }
             )
 
-        # 2. 检查请求间隔（防止高频请求）
-        interval_check = self._check_request_interval(client_ip, path)
-        if not interval_check['allowed']:
-            self._record_violation(client_ip, "interval")
-            action_name = {
-                'register': '注册',
-                'login': '登录',
-                'ad_watch': '观看广告',
-                'ad_random': '获取广告',
-                'default': '请求'
-            }.get(interval_check['action'], '请求')
+        # 2. 请求间隔检查已禁用（改为只使用速率限制）
+        # interval_check = self._check_request_interval(client_ip, path)
+        # if not interval_check['allowed']:
+        #     ...
 
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "code": 429,
-                    "message": f"{action_name}过于频繁，请稍后再试",
-                    "data": {
-                        "reason": "请求间隔过短",
-                        "action": action_name,
-                        "min_interval": interval_check['min_interval'],
-                        "actual_interval": round(interval_check['elapsed'], 1),
-                        "retry_after": round(interval_check['retry_after'], 1)
-                    }
-                }
-            )
-
-        # 3. 检查速率限制
+        # 3. 检查速率限制（保留）
         rate_check = self._check_rate_limit(client_ip, path)
         if not rate_check['allowed']:
             self._record_violation(client_ip, "rate_limit")
@@ -149,8 +131,8 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
                 }
             )
 
-        # 4. 记录请求时间（用于间隔检查）
-        self._record_request_time(client_ip, path)
+        # 4. 记录请求时间（已禁用）
+        # self._record_request_time(client_ip, path)
 
         return await call_next(request)
 
@@ -176,6 +158,10 @@ class EnhancedProtectionMiddleware(BaseHTTPMiddleware):
             return 'ad_watch'
         elif '/ad/random' in path or '/ad/' in path:
             return 'ad_random'
+        elif '/withdraw' in path:
+            return 'withdraw'
+        elif '/user/' in path and ('/info' in path or path.endswith('/user')):
+            return 'user_info'
         else:
             return 'default'
 
