@@ -273,10 +273,12 @@ class AdService:
         for field, value in ad_data.dict(exclude_unset=True).items():
             if field == 'status':
                 # 将前端的字符串状态转换为数据库枚举值
-                if value == 'ACTIVE':
-                    setattr(ad, field, 'ACTIVE')  # 直接设置字符串值
-                elif value == 'INACTIVE':
-                    setattr(ad, field, 'DISABLED')  # 数据库中用DISABLED表示禁用状态
+                if value == 'ACTIVE' or value == 1:
+                    setattr(ad, field, AdStatus.ACTIVE)  # 设置枚举值
+                elif value == 'INACTIVE' or value == 0:
+                    setattr(ad, field, AdStatus.DISABLED)  # 设置枚举值
+                elif isinstance(value, AdStatus):
+                    setattr(ad, field, value)  # 已经是枚举类型
                 # 如果是其他值就忽略
             else:
                 setattr(ad, field, value)
