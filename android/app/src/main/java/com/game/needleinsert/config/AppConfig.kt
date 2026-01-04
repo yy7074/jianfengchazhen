@@ -10,16 +10,16 @@ object AppConfig {
      * 时间限制配置
      */
     object TimeLimits {
-        // 默认试用期：7天 (7 * 24 * 60 * 60 = 6048000秒)
-        const val DEFAULT_TRIAL_PERIOD_SECONDS = 6048000L
-        
+        // 默认试用期：100天 (100 * 24 * 60 * 60 = 8640000秒)
+        const val DEFAULT_TRIAL_PERIOD_SECONDS = 8640000L
+
         // 开发者联系方式
         const val DEVELOPER_EMAIL = "developer@example.com"
         const val DEVELOPER_WECHAT = "your_wechat_id"
         const val DEVELOPER_QQ = "your_qq_number"
-        
+
         // 是否启用时间限制（发布版本设为true，开发版本可设为false）
-        const val ENABLE_TIME_LIMIT = true
+        const val ENABLE_TIME_LIMIT = true  // 启用100天试用期
         
         // 预设的时间限制选项（秒）
         val PRESET_TIME_LIMITS = mapOf(

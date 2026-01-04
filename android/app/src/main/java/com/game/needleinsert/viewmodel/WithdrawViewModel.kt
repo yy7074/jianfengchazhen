@@ -75,6 +75,10 @@ class WithdrawViewModel : ViewModel() {
                 // 从服务器刷新用户信息
                 val refreshedUser = UserManager.refreshUserInfo()
 
+                if (refreshedUser == null) {
+                    throw Exception("刷新用户信息失败")
+                }
+
                 // 获取动态兑换比例
                 val coinToRmbRate = loadExchangeRate(context)
                 val withdrawableAmount = refreshedUser.coins / coinToRmbRate
